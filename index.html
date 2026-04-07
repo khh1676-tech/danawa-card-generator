@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>다나와자동차 카드 생성기</title>
+<meta name="description" content="다나와자동차 카카오채널 주간 소식 카드 생성기">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif; background: #ECEEF2; min-height: 100vh; }
+  .app { display: grid; grid-template-columns: 400px 1fr; min-height: 100vh; }
+
+  .input-panel { background: #fff; border-right: 1px solid #E2E8F0; display: flex; flex-direction: column; }
+  .ip-header { padding: 18px 22px 14px; border-bottom: 1px solid #F1F5F9; }
+  .ip-header h1 { font-size: 15px; font-weight: 700; color: #0D1B3E; }
+  .ip-header p { font-size: 11px; color: #94A3B8; margin-top: 2px; }
+  .ip-body { flex: 1; overflow-y: auto; padding: 18px 22px; }
+  .ip-footer { padding: 14px 22px; border-top: 1px solid #F1F5F9; display: flex; gap: 9px; }
+
+  .sec { font-size: 10px; font-weight: 700; color: #94A3B8; letter-spacing: 0.08em; text-transform: uppercase; margin: 18px 0 8px; }
+  .sec:first-child { margin-top: 0; }
+
+  .period-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 7px; }
+  .period-row select, .period-row input { width: 100%; font-size: 12px; padding: 7px 9px; border: 1px solid #E2E8F0; border-radius: 7px; color: #0D1B3E; background: #F8FAFC; outline: none; }
+  .period-row select:focus, .period-row input:focus { border-color: #1B5EF7; background: #fff; }
+
+  .cover-inputs { display: flex; flex-direction: column; gap: 6px; }
+  .cover-inputs input { width: 100%; font-size: 12px; padding: 7px 9px; border: 1px solid #E2E8F0; border-radius: 7px; color: #0D1B3E; background: #F8FAFC; outline: none; }
+  .cover-inputs input:focus { border-color: #1B5EF7; background: #fff; }
+  .hint { font-size: 10px; color: #B0BAC8; margin-top: 2px; margin-bottom: 4px; }
+
+  .car-block { background: #F8FAFC; border: 1px solid #E8EEF6; border-radius: 9px; padding: 12px; margin-bottom: 8px; }
+  .cb-head { display: flex; align-items: center; gap: 7px; margin-bottom: 10px; }
+  .cb-num { width: 22px; height: 22px; border-radius: 50%; background: #1B5EF7; color: #fff; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .cb-head span { font-size: 12px; font-weight: 600; color: #0D1B3E; }
+  .f2 { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-bottom: 7px; }
+  .f1 { margin-bottom: 7px; }
+  .fg label { font-size: 10px; color: #64748B; font-weight: 600; display: block; margin-bottom: 3px; }
+  .fg input { width: 100%; font-size: 12px; padding: 6px 9px; border: 1px solid #E2E8F0; border-radius: 6px; color: #0D1B3E; background: #fff; outline: none; }
+  .fg input:focus { border-color: #1B5EF7; }
+  .img-upload-area { display: flex; gap: 7px; align-items: center; }
+  .img-status { flex: 1; font-size: 12px; padding: 7px 10px; border: 1px dashed #CBD5E1; border-radius: 6px; color: #94A3B8; background: #F8FAFC; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .img-status.done { border-style: solid; border-color: #22C55E; color: #16A34A; background: #F0FDF4; font-weight: 600; }
+  .up-btn { padding: 6px 12px; font-size: 11px; font-weight: 600; border: 1px solid #CBD5E1; border-radius: 6px; background: #fff; color: #475569; cursor: pointer; white-space: nowrap; flex-shrink: 0; }
+  .up-btn:hover { border-color: #1B5EF7; color: #1B5EF7; }
+
+  .btn-gen { flex: 1; padding: 10px; font-size: 13px; font-weight: 700; border: none; border-radius: 8px; background: #1B5EF7; color: #fff; cursor: pointer; }
+  .btn-gen:hover { background: #1450D4; }
+  .btn-dl { flex: 1; padding: 10px; font-size: 13px; font-weight: 700; border: 1.5px solid #1B5EF7; border-radius: 8px; background: #fff; color: #1B5EF7; cursor: pointer; }
+  .btn-dl:hover { background: #EEF3FF; }
+
+  /* 미리보기 패널 */
+  .preview-panel { padding: 22px; overflow-y: auto; }
+  .pv-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+  .pv-head h2 { font-size: 14px; font-weight: 700; color: #0D1B3E; }
+  .pv-head span { font-size: 11px; color: #94A3B8; }
+  .pv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+  .pv-item { background: #fff; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.07); }
+  .pv-label { padding: 7px 12px; font-size: 11px; font-weight: 600; color: #64748B; border-bottom: 1px solid #F1F5F9; display: flex; justify-content: space-between; align-items: center; }
+  .pv-label button { font-size: 11px; font-weight: 600; color: #1B5EF7; background: none; border: none; cursor: pointer; padding: 2px 6px; border-radius: 4px; }
+  .pv-label button:hover { background: #EEF3FF; }
+  .pv-label .edit-btn { color: #F59E0B; }
+  .pv-label .edit-btn:hover { background: #FEF3C7; }
+  canvas.pv-canvas { width: 100%; display: block; }
+  .empty { grid-column: 1/-1; text-align: center; padding: 50px 20px; color: #94A3B8; font-size: 13px; }
+
+  /* 드래그 편집 모달 */
+  .edit-modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 100; align-items: center; justify-content: center; }
+  .edit-modal-bg.open { display: flex; }
+  .edit-modal { background: #fff; border-radius: 16px; padding: 20px; width: 90vw; max-width: 560px; }
+  .edit-modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .edit-modal-header h3 { font-size: 14px; font-weight: 700; color: #0D1B3E; }
+  .edit-modal-header .close-btn { font-size: 18px; background: none; border: none; cursor: pointer; color: #94A3B8; line-height: 1; }
+  .edit-tip { font-size: 11px; color: #94A3B8; margin-bottom: 10px; }
+  .edit-tip span { color: #1B5EF7; font-weight: 600; }
+
+  /* 편집용 캔버스 래퍼 */
+  .edit-canvas-wrap { position: relative; width: 100%; background: #F1F5F9; border-radius: 10px; overflow: hidden; }
+  #edit-canvas { display: block; width: 100%; cursor: default; }
+
+  /* 편집 하단 컨트롤 */
+  .edit-controls { margin-top: 12px; }
+  .edit-car-tabs { display: flex; gap: 6px; margin-bottom: 10px; }
+  .edit-car-tab { padding: 5px 12px; font-size: 12px; font-weight: 600; border: 1px solid #E2E8F0; border-radius: 20px; cursor: pointer; background: #fff; color: #64748B; }
+  .edit-car-tab.active { background: #1B5EF7; color: #fff; border-color: #1B5EF7; }
+  .edit-sliders { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .slider-group label { font-size: 11px; color: #64748B; font-weight: 600; display: block; margin-bottom: 4px; }
+  .slider-row { display: flex; align-items: center; gap: 6px; }
+  .slider-row input[type=range] { flex: 1; }
+  .slider-row input[type=number] { width: 54px; font-size: 12px; padding: 4px 6px; border: 1px solid #E2E8F0; border-radius: 6px; color: #0D1B3E; text-align: center; outline: none; }
+  .slider-row input[type=number]:focus { border-color: #1B5EF7; }
+  .slider-row input[type=number]::-webkit-inner-spin-button { opacity: 1; }
+  .edit-footer-btns { display: flex; gap: 8px; margin-top: 14px; }
+  .edit-footer-btns button { flex: 1; padding: 9px; font-size: 13px; font-weight: 700; border-radius: 8px; cursor: pointer; }
+  .btn-reset { border: 1px solid #E2E8F0; background: #fff; color: #64748B; }
+  .btn-apply { border: none; background: #1B5EF7; color: #fff; }
+
+  #rc { display: none; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="input-panel">
+    <div class="ip-header">
+      <h1>다나와자동차 카드 생성기</h1>
+      <p>카카오채널 주간 소식 이미지</p>
+    </div>
+    <div class="ip-body">
+      <div class="sec">발행 기간</div>
+      <div class="period-row">
+        <input type="text" id="y" value="2026" placeholder="연도">
+        <select id="mo">
+          <option>1월</option><option>2월</option><option>3월</option>
+          <option selected>4월</option><option>5월</option><option>6월</option>
+          <option>7월</option><option>8월</option><option>9월</option>
+          <option>10월</option><option>11월</option><option>12월</option>
+        </select>
+        <select id="wk">
+          <option>1주차</option><option>2주차</option>
+          <option>3주차</option><option>4주차</option><option>5주차</option>
+        </select>
+      </div>
+      <div class="sec">커버 카드 문구</div>
+      <div class="cover-inputs">
+        <div>
+          <input type="text" id="c1" value="가장 많이 찾는" placeholder="첫째 줄 (검정)">
+          <div class="hint">검정 텍스트</div>
+        </div>
+        <div>
+          <input type="text" id="c2" value="차량만 모았어요!" placeholder="둘째 줄 (파랑 강조)">
+          <div class="hint">파란 강조 텍스트</div>
+        </div>
+        <div>
+          <input type="text" id="cs" value="렌트·리스 인기 차종, 월 17만원대부터" placeholder="서브텍스트">
+        </div>
+      </div>
+      <div class="sec">차량 정보 (6대)</div>
+      <div id="car-list"></div>
+    </div>
+    <div class="ip-footer">
+      <button class="btn-gen" onclick="renderAll()">미리보기 생성</button>
+      <button class="btn-dl" onclick="downloadAll()">전체 저장</button>
+    </div>
+  </div>
+
+  <div class="preview-panel">
+    <div class="pv-head">
+      <h2>미리보기</h2>
+      <span id="pv-period">—</span>
+    </div>
+    <div class="pv-grid" id="pv-grid">
+      <div class="empty">입력 후 <strong>미리보기 생성</strong>을 눌러주세요<br>커버 1장 + 차량 카드 6장</div>
+    </div>
+  </div>
+</div>
+
+<!-- 드래그 편집 모달 -->
+<div class="edit-modal-bg" id="edit-modal-bg">
+  <div class="edit-modal">
+    <div class="edit-modal-header">
+      <h3>커버 카드 차량 위치 편집</h3>
+      <button class="close-btn" onclick="closeEditModal()">✕</button>
+    </div>
+    <div class="edit-tip">차량을 <span>드래그</span>해서 위치를 조정하거나, 아래 슬라이더로 세밀하게 조정하세요</div>
+    <div class="edit-canvas-wrap">
+      <canvas id="edit-canvas"></canvas>
+    </div>
+    <div class="edit-controls">
+      <div class="edit-car-tabs" id="edit-tabs"></div>
+      <div class="edit-sliders">
+        <div class="slider-group">
+          <label>X 위치</label>
+          <div class="slider-row">
+            <input type="range" id="sl-x" min="-200" max="800" step="1" oninput="onSlider('x',this.value)">
+            <input type="number" id="num-x" min="-200" max="800" step="1" oninput="onNumber('x',this.value)">
+          </div>
+        </div>
+        <div class="slider-group">
+          <label>Y 위치</label>
+          <div class="slider-row">
+            <input type="range" id="sl-y" min="300" max="1000" step="1" oninput="onSlider('y',this.value)">
+            <input type="number" id="num-y" min="300" max="1000" step="1" oninput="onNumber('y',this.value)">
+          </div>
+        </div>
+        <div class="slider-group">
+          <label>크기 (%)</label>
+          <div class="slider-row">
+            <input type="range" id="sl-s" min="20" max="200" step="1" oninput="onSlider('s',this.value)">
+            <input type="number" id="num-s" min="20" max="200" step="1" oninput="onNumber('s',this.value)">
+          </div>
+        </div>
+        <div class="slider-group">
+          <label>순서 (앞/뒤)</label>
+          <div class="slider-row">
+            <input type="range" id="sl-z" min="1" max="3" step="1" oninput="onSlider('z',this.value)">
+            <input type="number" id="num-z" min="1" max="3" step="1" oninput="onNumber('z',this.value)">
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="edit-footer-btns">
+      <button class="btn-reset" onclick="resetPositions()">기본값으로</button>
+      <button class="btn-apply" onclick="applyEdit()">적용하기</button>
+    </div>
+  </div>
+</div>
+
+<canvas id="rc"></canvas>
+
+<script>
+const W = 800, H = 1000;
+const BLUE = '#1B5EF7';
+const DARK = '#0D1B3E';
+const CREAM = '#EEE9E0';
+const FOOTER_H = 72;
+
+const cars = Array.from({length:6}, () => ({ name:'', spec:'', monthly:'', img:null, priceType:'rent' }));
+
+// 커버 차량 위치 상태 (x, y = 차량 중심 기준, scale = 배율)
+const DEFAULT_SLOTS = [
+  { x: 180, y: 640, scale: 100, z: 1 },
+  { x: 560, y: 690, scale: 110, z: 2 },
+  { x: 370, y: 890, scale: 140, z: 3 },
+];
+let coverSlots = DEFAULT_SLOTS.map(s => ({...s}));
+
+/* ── 폼 생성 ── */
+function buildInputs() {
+  const list = document.getElementById('car-list');
+  list.innerHTML = '';
+  cars.forEach((c, i) => {
+    const d = document.createElement('div');
+    d.className = 'car-block';
+    d.innerHTML = `
+      <div class="cb-head"><div class="cb-num">${i+1}</div><span>차량 ${i+1}</span></div>
+      <div class="f2">
+        <div class="fg"><label>차량 이름</label><input type="text" placeholder="예) 기아 카니발" oninput="cars[${i}].name=this.value"></div>
+        <div class="fg"><label>트림/스펙</label><input type="text" placeholder="예) 가솔린 터보 1.6" oninput="cars[${i}].spec=this.value"></div>
+      </div>
+      <div class="f1 fg">
+        <label>가격 유형</label>
+        <div style="display:flex;gap:6px;margin-bottom:7px">
+          <label style="display:flex;align-items:center;gap:4px;font-size:12px;font-weight:400;color:#0D1B3E;cursor:pointer">
+            <input type="radio" name="pt${i}" value="rent" checked onchange="cars[${i}].priceType=this.value" style="width:auto"> 장기 렌트/리스
+          </label>
+          <label style="display:flex;align-items:center;gap:4px;font-size:12px;font-weight:400;color:#0D1B3E;cursor:pointer">
+            <input type="radio" name="pt${i}" value="price" onchange="cars[${i}].priceType=this.value" style="width:auto"> 차량 가격
+          </label>
+        </div>
+        <input type="text" placeholder="예) 월 28만원~ / 3,500만원~" oninput="cars[${i}].monthly=this.value">
+      </div>
+      <div class="fg">
+        <label>차량 이미지</label>
+        <div class="img-upload-area">
+          <div class="img-status" id="st${i}">이미지를 선택해주세요</div>
+          <button class="up-btn" onclick="document.getElementById('f${i}').click()">파일 선택</button>
+          <input type="file" id="f${i}" accept="image/*" style="display:none" onchange="loadFile(${i},this)">
+        </div>
+      </div>`;
+    list.appendChild(d);
+  });
+}
+
+function loadFile(i, input) {
+  const file = input.files[0]; if (!file) return;
+  const st = document.getElementById('st' + i);
+  st.textContent = '로딩 중...'; st.className = 'img-status';
+  const r = new FileReader();
+  r.onload = e => {
+    const img = new Image();
+    img.onload = () => { cars[i].img = img; st.textContent = '✓ 등록 완료'; st.className = 'img-status done'; };
+    img.src = e.target.result;
+  };
+  r.readAsDataURL(file);
+}
+
+function getPeriod() {
+  return `${document.getElementById('y').value||'2026'} ${document.getElementById('mo').value} ${document.getElementById('wk').value}`;
+}
+
+function rr(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y); ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+  ctx.lineTo(x+w,y+h-r); ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+  ctx.lineTo(x+r,y+h); ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+  ctx.lineTo(x,y+r); ctx.quadraticCurveTo(x,y,x+r,y);
+  ctx.closePath();
+}
+
+function drawFooter(ctx) {
+  ctx.fillStyle = BLUE;
+  ctx.fillRect(0, H - FOOTER_H, W, FOOTER_H);
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 30px sans-serif'; ctx.textAlign = 'left';
+  ctx.fillText('danawa', 36, H - 20);
+  const ax=187, ay=H-47;
+  ctx.beginPath(); ctx.moveTo(ax,ay); ctx.lineTo(ax+18,ay+13); ctx.lineTo(ax,ay+26); ctx.closePath();
+  ctx.fillStyle = '#fff'; ctx.fill();
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 30px sans-serif';
+  ctx.fillText('다나와자동차', 216, H - 20);
+  ctx.textAlign = 'left';
+}
+
+/* ── 커버 카드 드로우 (슬롯 데이터 사용) ── */
+async function drawCoverToCtx(ctx, slots) {
+  const line1 = document.getElementById('c1').value || '가장 많이 찾는';
+  const line2 = document.getElementById('c2').value || '차량만 모았어요!';
+  const sub   = document.getElementById('cs').value || '';
+
+  ctx.fillStyle = CREAM; ctx.fillRect(0,0,W,H);
+
+  ctx.fillStyle = BLUE;
+  ctx.beginPath();
+  ctx.moveTo(0, H*0.60); ctx.lineTo(0, H); ctx.lineTo(W*0.72, H);
+  ctx.closePath(); ctx.fill();
+
+  ctx.font = 'bold 26px sans-serif';
+  const bw = ctx.measureText('다나와자동차').width + 48;
+  const bx = (W-bw)/2;
+  ctx.fillStyle = BLUE; rr(ctx,bx,44,bw,46,23); ctx.fill();
+  ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.fillText('다나와자동차', W/2, 75);
+
+  ctx.fillStyle = DARK; ctx.font = 'bold 72px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText(line1, W/2, 192);
+  ctx.fillStyle = BLUE; ctx.fillText(line2, W/2, 276);
+  ctx.fillStyle = '#555'; ctx.font = '27px sans-serif'; ctx.fillText(sub, W/2, 328);
+  ctx.textAlign = 'left';
+
+  // z순서 정렬 후 그리기
+  const ordered = [...slots].sort((a,b) => a.z - b.z);
+  for (const s of ordered) {
+    const img = cars[s.cidx !== undefined ? s.cidx : slots.indexOf(s)].img;
+    const cidx = s.cidx !== undefined ? s.cidx : ordered.indexOf(s);
+    const carImg = cars[cidx].img;
+    const BASE_W = 400;
+    const drawW = BASE_W * s.scale / 100;
+    if (carImg) {
+      const aspect = carImg.height / carImg.width;
+      const drawH = drawW * aspect;
+      ctx.drawImage(carImg, s.x - drawW/2, s.y - drawH/2, drawW, drawH);
+    } else {
+      ctx.fillStyle = 'rgba(0,0,0,0.07)';
+      const ph = drawW * 0.56;
+      rr(ctx, s.x-drawW/2, s.y-ph/2, drawW, ph, 10); ctx.fill();
+      ctx.fillStyle='rgba(0,0,0,0.2)'; ctx.font='16px sans-serif'; ctx.textAlign='center';
+      ctx.fillText('차량 '+(cidx+1), s.x, s.y+5); ctx.textAlign='left';
+    }
+  }
+}
+
+/* ── 차량 카드 ── */
+async function drawCarCard(ctx, car) {
+  ctx.fillStyle = CREAM; ctx.fillRect(0,0,W,H);
+
+  // ── 배경 장식: 우측 하단 큰 반원 ──
+  ctx.beginPath();
+  ctx.arc(W + 80, H + 80, 360, 0, Math.PI*2);
+  ctx.fillStyle = 'rgba(0,0,0,0.04)';
+  ctx.fill();
+
+  // ── 배경 장식: 좌측 상단 큰 반원 ──
+  ctx.beginPath();
+  ctx.arc(-80, -80, 360, 0, Math.PI*2);
+  ctx.fillStyle = 'rgba(0,0,0,0.04)';
+  ctx.fill();
+
+
+
+  // ── 상단 텍스트 영역 ──
+
+
+  // 차량명 — 상단 왼쪽 크게
+  const px = 52;
+  ctx.fillStyle=DARK; ctx.font='bold 62px sans-serif';
+  ctx.fillText(car.name||'차량명을 입력하세요', px, 148);
+
+  // 스펙
+  ctx.fillStyle='#888'; ctx.font='26px sans-serif';
+  ctx.fillText(car.spec||'트림 정보', px, 192);
+
+  // ── 차량 이미지 — 중앙 크게 ──
+  const imgObj=car.img;
+  const imgX=20, imgY=220, imgW=W-40, imgH=480;
+  if(imgObj){
+    const scale=Math.min(imgW/imgObj.width,imgH/imgObj.height);
+    const dw=imgObj.width*scale,dh=imgObj.height*scale;
+    ctx.drawImage(imgObj,imgX+(imgW-dw)/2,imgY+(imgH-dh)/2,dw,dh);
+  } else {
+    ctx.fillStyle='rgba(0,0,0,0.05)'; rr(ctx,imgX,imgY,imgW,imgH,14); ctx.fill();
+    ctx.fillStyle='rgba(0,0,0,0.18)'; ctx.font='18px sans-serif'; ctx.textAlign='center';
+    ctx.fillText('차량 이미지를 추가해주세요',W/2,imgY+imgH/2+8); ctx.textAlign='left';
+  }
+
+  // ── 하단 가격 영역 ──
+  const priceLabel = car.priceType === 'price' ? '차량 가격' : '장기 렌트/리스';
+  ctx.fillStyle='#888'; ctx.font='24px sans-serif'; ctx.textAlign='center';
+  ctx.fillText(priceLabel, W/2, 756);
+  ctx.fillStyle=BLUE; ctx.font='bold 80px sans-serif'; ctx.textAlign='center';
+  ctx.fillText(car.monthly||'금액을 입력하세요', W/2, 852);
+  ctx.textAlign='left';
+}
+
+/* ── 렌더 ── */
+async function renderAll() {
+  const period = getPeriod();
+  document.getElementById('pv-period').textContent = period;
+  const cvs = document.getElementById('rc');
+  cvs.width=W; cvs.height=H;
+  const ctx = cvs.getContext('2d');
+  const results = [];
+
+  // coverSlots에 cidx 부여
+  const slotsWithIdx = coverSlots.map((s,i) => ({...s, cidx:i}));
+  await drawCoverToCtx(ctx, slotsWithIdx);
+  results.push({ canvas: clone(cvs), label:'커버 카드', isCover: true });
+
+  for (let i=0; i<6; i++) {
+    await drawCarCard(ctx, cars[i]);
+    results.push({ canvas: clone(cvs), label:`차량 ${i+1}`, isCover: false });
+  }
+
+  const grid = document.getElementById('pv-grid');
+  grid.innerHTML = '';
+  results.forEach(({canvas,label,isCover}, idx) => {
+    const item = document.createElement('div'); item.className='pv-item';
+    const lbar = document.createElement('div'); lbar.className='pv-label';
+    const btnHtml = isCover
+      ? `<div style="display:flex;gap:4px"><button onclick="dlOne(${idx})">저장</button><button class="edit-btn" onclick="openEditModal()">✏️ 위치 편집</button></div>`
+      : `<button onclick="dlOne(${idx})">저장</button>`;
+    lbar.innerHTML = `<span>${label}</span>${btnHtml}`;
+    const cv = document.createElement('canvas'); cv.className='pv-canvas';
+    cv.width=400; cv.height=500;
+    cv.getContext('2d').drawImage(canvas,0,0,400,500);
+    cv.style.cursor = 'default';
+    item.appendChild(lbar); item.appendChild(cv);
+    grid.appendChild(item);
+  });
+  window._res=results; window._period=period;
+}
+
+/* ══════════════════════════════════════
+   드래그 편집 모달
+══════════════════════════════════════ */
+const EC_W = 500, EC_H = 625; // 편집 캔버스 크기 (800:1000 비율)
+const SCALE_RATIO = EC_W / W;  // 0.625
+let editSlots = [];
+let activeTab = 0;
+let dragState = null; // { cidx, offsetX, offsetY }
+
+function openEditModal() {
+  editSlots = coverSlots.map((s,i) => ({...s, cidx:i}));
+  buildTabs();
+  selectTab(0);
+  const modal = document.getElementById('edit-modal-bg');
+  modal.classList.add('open');
+  const ec = document.getElementById('edit-canvas');
+  ec.width = EC_W; ec.height = EC_H;
+  renderEditCanvas();
+  bindDragEvents();
+}
+
+function closeEditModal() {
+  document.getElementById('edit-modal-bg').classList.remove('open');
+}
+
+function buildTabs() {
+  const tabs = document.getElementById('edit-tabs');
+  tabs.innerHTML = '';
+  editSlots.forEach((s, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'edit-car-tab' + (i===0?' active':'');
+    btn.textContent = `차량 ${i+1}`;
+    btn.onclick = () => selectTab(i);
+    tabs.appendChild(btn);
+  });
+}
+
+function selectTab(i) {
+  activeTab = i;
+  document.querySelectorAll('.edit-car-tab').forEach((b,j) => b.classList.toggle('active', j===i));
+  const s = editSlots[i];
+  document.getElementById('sl-x').value = s.x;
+  document.getElementById('sl-y').value = s.y;
+  document.getElementById('sl-s').value = s.scale;
+  document.getElementById('sl-z').value = s.z;
+  document.getElementById('num-x').value = Math.round(s.x);
+  document.getElementById('num-y').value = Math.round(s.y);
+  document.getElementById('num-s').value = Math.round(s.scale);
+  document.getElementById('num-z').value = s.z;
+}
+
+function onSlider(type, val) {
+  const s = editSlots[activeTab];
+  const v = parseFloat(val);
+  if (type==='x') { s.x=v; document.getElementById('num-x').value=Math.round(v); }
+  if (type==='y') { s.y=v; document.getElementById('num-y').value=Math.round(v); }
+  if (type==='s') { s.scale=v; document.getElementById('num-s').value=Math.round(v); }
+  if (type==='z') { s.z=parseInt(v); document.getElementById('num-z').value=parseInt(v); }
+  renderEditCanvas();
+}
+
+async function renderEditCanvas() {
+  const ec = document.getElementById('edit-canvas');
+  const ctx = ec.getContext('2d');
+  ctx.save();
+  ctx.scale(SCALE_RATIO, SCALE_RATIO);
+  await drawCoverToCtx(ctx, editSlots);
+  ctx.restore();
+
+  // 선택된 차량 핸들 표시
+  const s = editSlots[activeTab];
+  const ex = s.x * SCALE_RATIO;
+  const ey = s.y * SCALE_RATIO;
+  const BASE_W = 400 * s.scale / 100 * SCALE_RATIO;
+  const carImg = cars[activeTab].img;
+  const aspect = carImg ? carImg.height/carImg.width : 0.56;
+  const BASE_H = BASE_W * aspect;
+
+  ctx.strokeStyle = '#1B5EF7';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([5,3]);
+  ctx.strokeRect(ex - BASE_W/2, ey - BASE_H/2, BASE_W, BASE_H);
+  ctx.setLineDash([]);
+
+  // 코너 핸들
+  const hs = 8;
+  [[ex-BASE_W/2, ey-BASE_H/2],[ex+BASE_W/2, ey-BASE_H/2],
+   [ex-BASE_W/2, ey+BASE_H/2],[ex+BASE_W/2, ey+BASE_H/2]].forEach(([hx,hy]) => {
+    ctx.fillStyle='#fff'; ctx.fillRect(hx-hs/2,hy-hs/2,hs,hs);
+    ctx.strokeStyle='#1B5EF7'; ctx.lineWidth=1.5; ctx.strokeRect(hx-hs/2,hy-hs/2,hs,hs);
+  });
+
+  // 차량 번호 레이블
+  ctx.fillStyle = '#1B5EF7';
+  rr2(ctx, ex-16, ey-BASE_H/2-22, 32, 18, 4); ctx.fill();
+  ctx.fillStyle='#fff'; ctx.font='bold 11px sans-serif'; ctx.textAlign='center';
+  ctx.fillText('차량'+(activeTab+1), ex, ey-BASE_H/2-9); ctx.textAlign='left';
+}
+
+function rr2(ctx,x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y); ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+  ctx.lineTo(x+w,y+h-r); ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+  ctx.lineTo(x+r,y+h); ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+  ctx.lineTo(x,y+r); ctx.quadraticCurveTo(x,y,x+r,y);
+  ctx.closePath();
+}
+
+function bindDragEvents() {
+  const ec = document.getElementById('edit-canvas');
+  ec.onmousedown = e => {
+    const rect = ec.getBoundingClientRect();
+    const mx = (e.clientX - rect.left) / SCALE_RATIO;
+    const my = (e.clientY - rect.top) / SCALE_RATIO;
+    // 클릭한 위치에 차량 있는지 확인 (z역순 — 앞에 있는 것 우선)
+    const sorted = [...editSlots].sort((a,b)=>b.z-a.z);
+    for (const s of sorted) {
+      const BASE_W = 400 * s.scale/100;
+      const carImg = cars[s.cidx].img;
+      const aspect = carImg ? carImg.height/carImg.width : 0.56;
+      const BASE_H = BASE_W * aspect;
+      if (mx >= s.x-BASE_W/2 && mx <= s.x+BASE_W/2 &&
+          my >= s.y-BASE_H/2 && my <= s.y+BASE_H/2) {
+        const tabIdx = editSlots.findIndex(es => es.cidx===s.cidx);
+        selectTab(tabIdx);
+        dragState = { cidx: s.cidx, offsetX: mx-s.x, offsetY: my-s.y };
+        ec.style.cursor = 'grabbing';
+        break;
+      }
+    }
+  };
+  ec.onmousemove = e => {
+    if (!dragState) return;
+    const rect = ec.getBoundingClientRect();
+    const mx = (e.clientX - rect.left) / SCALE_RATIO;
+    const my = (e.clientY - rect.top) / SCALE_RATIO;
+    const s = editSlots.find(es => es.cidx===dragState.cidx);
+    s.x = mx - dragState.offsetX;
+    s.y = my - dragState.offsetY;
+    // 슬라이더 동기화
+    document.getElementById('sl-x').value = Math.round(s.x);
+    document.getElementById('sl-y').value = Math.round(s.y);
+    document.getElementById('num-x').value = Math.round(s.x);
+    document.getElementById('num-y').value = Math.round(s.y);
+    renderEditCanvas();
+  };
+  ec.onmouseup = () => { dragState=null; ec.style.cursor='default'; };
+  ec.onmouseleave = () => { dragState=null; ec.style.cursor='default'; };
+
+  // 터치 지원
+  ec.ontouchstart = e => {
+    e.preventDefault();
+    const touch = e.touches[0];
+    const rect = ec.getBoundingClientRect();
+    const mx = (touch.clientX - rect.left) / SCALE_RATIO;
+    const my = (touch.clientY - rect.top) / SCALE_RATIO;
+    const sorted = [...editSlots].sort((a,b)=>b.z-a.z);
+    for (const s of sorted) {
+      const BASE_W = 400*s.scale/100;
+      const carImg = cars[s.cidx].img;
+      const aspect = carImg ? carImg.height/carImg.width : 0.56;
+      const BASE_H = BASE_W*aspect;
+      if (mx>=s.x-BASE_W/2&&mx<=s.x+BASE_W/2&&my>=s.y-BASE_H/2&&my<=s.y+BASE_H/2) {
+        const tabIdx = editSlots.findIndex(es=>es.cidx===s.cidx);
+        selectTab(tabIdx);
+        dragState={cidx:s.cidx,offsetX:mx-s.x,offsetY:my-s.y};
+        break;
+      }
+    }
+  };
+  ec.ontouchmove = e => {
+    e.preventDefault();
+    if(!dragState) return;
+    const touch=e.touches[0];
+    const rect=ec.getBoundingClientRect();
+    const mx=(touch.clientX-rect.left)/SCALE_RATIO;
+    const my=(touch.clientY-rect.top)/SCALE_RATIO;
+    const s=editSlots.find(es=>es.cidx===dragState.cidx);
+    s.x=mx-dragState.offsetX; s.y=my-dragState.offsetY;
+    document.getElementById('sl-x').value=Math.round(s.x);
+    document.getElementById('sl-y').value=Math.round(s.y);
+    document.getElementById('num-x').value=Math.round(s.x);
+    document.getElementById('num-y').value=Math.round(s.y);
+    renderEditCanvas();
+  };
+  ec.ontouchend = () => { dragState=null; };
+}
+
+function onNumber(type, val) {
+  const v = parseFloat(val);
+  if (isNaN(v)) return;
+  const s = editSlots[activeTab];
+  if (type==='x') { s.x=v; document.getElementById('sl-x').value=v; }
+  if (type==='y') { s.y=v; document.getElementById('sl-y').value=v; }
+  if (type==='s') { s.scale=v; document.getElementById('sl-s').value=v; }
+  if (type==='z') { s.z=parseInt(v); document.getElementById('sl-z').value=parseInt(v); }
+  renderEditCanvas();
+}
+
+function resetPositions() {
+  editSlots = DEFAULT_SLOTS.map((s,i) => ({...s, cidx:i}));
+  selectTab(activeTab);
+  renderEditCanvas();
+}
+
+async function applyEdit() {
+  coverSlots = editSlots.map(s => ({x:s.x, y:s.y, scale:s.scale, z:s.z}));
+  closeEditModal();
+  await renderAll();
+}
+
+/* ── 유틸 ── */
+function clone(src) {
+  const c=document.createElement('canvas'); c.width=src.width; c.height=src.height;
+  c.getContext('2d').drawImage(src,0,0); return c;
+}
+function dlOne(idx) {
+  if(!window._res) { alert('먼저 미리보기 생성을 눌러주세요'); return; }
+  const {canvas,label}=window._res[idx];
+  const filename = `${(window._period||'카드').replace(/ /g,'_')}_${String(idx+1).padStart(2,'0')}_${label}.png`;
+  canvas.toBlob(blob => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }, 'image/png');
+}
+function downloadAll() {
+  if(!window._res){alert('먼저 미리보기 생성을 눌러주세요');return;}
+  window._res.forEach((_,i)=>setTimeout(()=>dlOne(i),i*300));
+}
+
+function rr(ctx,x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y); ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+  ctx.lineTo(x+w,y+h-r); ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+  ctx.lineTo(x+r,y+h); ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+  ctx.lineTo(x,y+r); ctx.quadraticCurveTo(x,y,x+r,y);
+  ctx.closePath();
+}
+
+buildInputs();
+</script>
+</body>
+</html>
