@@ -96,6 +96,15 @@
   .btn-apply { border: none; background: #1B5EF7; color: #fff; }
 
   #rc { display: none; }
+
+  /* 테마 선택 */
+  .theme-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 7px; }
+  .theme-item { border-radius: 8px; overflow: hidden; cursor: pointer; border: 2px solid transparent; transition: border-color 0.15s; }
+  .theme-item:hover { border-color: #94A3B8; }
+  .theme-item.active { border-color: #1B5EF7; }
+  .theme-thumb { width: 100%; aspect-ratio: 4/5; display: block; }
+  .theme-name { font-size: 10px; font-weight: 600; color: #64748B; text-align: center; padding: 4px 0; }
+  .theme-item.active .theme-name { color: #1B5EF7; }
 </style>
 </head>
 <body>
@@ -106,6 +115,9 @@
       <p>카카오채널 주간 소식 이미지</p>
     </div>
     <div class="ip-body">
+      <div class="sec">카드 테마</div>
+      <div class="theme-grid" id="theme-grid"></div>
+
       <div class="sec">발행 기간</div>
       <div class="period-row">
         <input type="text" id="y" value="2026" placeholder="연도">
@@ -220,6 +232,115 @@ const FOOTER_H = 72;
 
 const cars = Array.from({length:6}, () => ({ name:'', spec:'', monthly:'', img:null, priceType:'rent' }));
 
+/* ══════════════════════════════════
+   테마 정의
+══════════════════════════════════ */
+const THEMES = [
+  {
+    id: 'classic',
+    name: '클래식',
+    bg: '#EEE9E0',
+    accent: '#1B5EF7',
+    priceColor: '#1B5EF7',
+    textDark: '#0D1B3E',
+    coverTriColor: '#1B5EF7',
+    cardDeco1: 'rgba(0,0,0,0.04)',
+    cardDeco2: 'rgba(0,0,0,0.04)',
+  },
+  {
+    id: 'dark',
+    name: '다크',
+    bg: '#0D1B3E',
+    accent: '#C9A84C',
+    priceColor: '#C9A84C',
+    textDark: '#FFFFFF',
+    coverTriColor: '#C9A84C',
+    cardDeco1: 'rgba(201,168,76,0.08)',
+    cardDeco2: 'rgba(201,168,76,0.05)',
+  },
+  {
+    id: 'white',
+    name: '화이트',
+    bg: '#FFFFFF',
+    accent: '#1B5EF7',
+    priceColor: '#1B5EF7',
+    textDark: '#0D1B3E',
+    coverTriColor: '#1B5EF7',
+    cardDeco1: 'rgba(27,94,247,0.05)',
+    cardDeco2: 'rgba(27,94,247,0.03)',
+  },
+  {
+    id: 'green',
+    name: '그린',
+    bg: '#E8F5EE',
+    accent: '#1A6B3C',
+    priceColor: '#1A6B3C',
+    textDark: '#0D2B1A',
+    coverTriColor: '#1A6B3C',
+    cardDeco1: 'rgba(26,107,60,0.06)',
+    cardDeco2: 'rgba(26,107,60,0.04)',
+  },
+  {
+    id: 'sunset',
+    name: '선셋',
+    bg: '#FDF0E8',
+    accent: '#C94A1A',
+    priceColor: '#C94A1A',
+    textDark: '#2D1206',
+    coverTriColor: '#C94A1A',
+    cardDeco1: 'rgba(201,74,26,0.06)',
+    cardDeco2: 'rgba(201,74,26,0.04)',
+  },
+];
+let activeTheme = THEMES[0];
+
+function buildThemeGrid() {
+  const grid = document.getElementById('theme-grid');
+  grid.innerHTML = '';
+  THEMES.forEach((t, i) => {
+    const item = document.createElement('div');
+    item.className = 'theme-item' + (i === 0 ? ' active' : '');
+    item.onclick = () => selectTheme(i);
+    item.id = 'theme-' + t.id;
+
+    // 썸네일 캔버스
+    const tc = document.createElement('canvas');
+    tc.className = 'theme-thumb';
+    tc.width = 80; tc.height = 100;
+    drawThumbCanvas(tc, t);
+
+    const name = document.createElement('div');
+    name.className = 'theme-name';
+    name.textContent = t.name;
+
+    item.appendChild(tc);
+    item.appendChild(name);
+    grid.appendChild(item);
+  });
+}
+
+function drawThumbCanvas(tc, t) {
+  const ctx = tc.getContext('2d');
+  const tw = 80, th = 100;
+  // 배경
+  ctx.fillStyle = t.bg; ctx.fillRect(0,0,tw,th);
+  // 삼각형
+  ctx.fillStyle = t.coverTriColor;
+  ctx.beginPath(); ctx.moveTo(0,th*0.55); ctx.lineTo(0,th); ctx.lineTo(tw*0.72,th); ctx.closePath(); ctx.fill();
+  // 배지
+  ctx.fillStyle = t.accent;
+  ctx.beginPath(); ctx.roundRect(tw*0.2, 6, tw*0.6, 10, 5); ctx.fill();
+  // 텍스트 줄
+  ctx.fillStyle = t.textDark; ctx.fillRect(tw*0.12, 22, tw*0.55, 5);
+  ctx.fillStyle = t.accent; ctx.fillRect(tw*0.12, 31, tw*0.72, 7);
+  ctx.fillStyle = t.textDark + '66'; ctx.fillRect(tw*0.12, 43, tw*0.45, 4);
+}
+
+function selectTheme(i) {
+  activeTheme = THEMES[i];
+  document.querySelectorAll('.theme-item').forEach((el, j) => el.classList.toggle('active', j === i));
+}
+
 // 커버 차량 위치 상태 (x, y = 차량 중심 기준, scale = 배율)
 const DEFAULT_SLOTS = [
   { x: 180, y: 640, scale: 100, z: 1 },
@@ -310,9 +431,10 @@ async function drawCoverToCtx(ctx, slots) {
   const line2 = document.getElementById('c2').value || '차량만 모았어요!';
   const sub   = document.getElementById('cs').value || '';
 
-  ctx.fillStyle = CREAM; ctx.fillRect(0,0,W,H);
+  const T = activeTheme;
+  ctx.fillStyle = T.bg; ctx.fillRect(0,0,W,H);
 
-  ctx.fillStyle = BLUE;
+  ctx.fillStyle = T.coverTriColor;
   ctx.beginPath();
   ctx.moveTo(0, H*0.60); ctx.lineTo(0, H); ctx.lineTo(W*0.72, H);
   ctx.closePath(); ctx.fill();
@@ -321,13 +443,14 @@ async function drawCoverToCtx(ctx, slots) {
   ctx.font = 'bold 26px sans-serif';
   const bw = ctx.measureText(badgeText).width + 48;
   const bx = (W-bw)/2;
-  ctx.fillStyle = BLUE; rr(ctx,bx,44,bw,46,23); ctx.fill();
+  ctx.fillStyle = T.accent; rr(ctx,bx,44,bw,46,23); ctx.fill();
   ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.fillText(badgeText, W/2, 75);
 
-  ctx.fillStyle = DARK; ctx.font = 'bold 72px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillStyle = T.textDark; ctx.font = 'bold 72px sans-serif'; ctx.textAlign = 'center';
   ctx.fillText(line1, W/2, 192);
-  ctx.fillStyle = BLUE; ctx.fillText(line2, W/2, 276);
-  ctx.fillStyle = '#555'; ctx.font = '27px sans-serif'; ctx.fillText(sub, W/2, 328);
+  ctx.fillStyle = T.accent; ctx.fillText(line2, W/2, 276);
+  ctx.fillStyle = T.id === 'dark' ? 'rgba(255,255,255,0.55)' : '#555';
+  ctx.font = '27px sans-serif'; ctx.fillText(sub, W/2, 328);
   ctx.textAlign = 'left';
 
   // z순서 정렬 후 그리기
@@ -354,18 +477,19 @@ async function drawCoverToCtx(ctx, slots) {
 
 /* ── 차량 카드 ── */
 async function drawCarCard(ctx, car) {
-  ctx.fillStyle = CREAM; ctx.fillRect(0,0,W,H);
+  const T = activeTheme;
+  ctx.fillStyle = T.bg; ctx.fillRect(0,0,W,H);
 
   // ── 배경 장식: 우측 하단 큰 반원 ──
   ctx.beginPath();
   ctx.arc(W + 80, H + 80, 360, 0, Math.PI*2);
-  ctx.fillStyle = 'rgba(0,0,0,0.04)';
+  ctx.fillStyle = T.cardDeco1;
   ctx.fill();
 
   // ── 배경 장식: 좌측 상단 큰 반원 ──
   ctx.beginPath();
   ctx.arc(-80, -80, 360, 0, Math.PI*2);
-  ctx.fillStyle = 'rgba(0,0,0,0.04)';
+  ctx.fillStyle = T.cardDeco2;
   ctx.fill();
 
 
@@ -375,11 +499,12 @@ async function drawCarCard(ctx, car) {
 
   // 차량명 — 상단 왼쪽 크게
   const px = 52;
-  ctx.fillStyle=DARK; ctx.font='bold 62px sans-serif';
+  ctx.fillStyle=T.textDark; ctx.font='bold 62px sans-serif';
   ctx.fillText(car.name||'차량명을 입력하세요', px, 148);
 
   // 스펙
-  ctx.fillStyle='#888'; ctx.font='26px sans-serif';
+  ctx.fillStyle= T.id==='dark' ? 'rgba(255,255,255,0.5)' : '#888';
+  ctx.font='26px sans-serif';
   ctx.fillText(car.spec||'트림 정보', px, 192);
 
   // ── 차량 이미지 — 중앙 크게 ──
@@ -397,9 +522,10 @@ async function drawCarCard(ctx, car) {
 
   // ── 하단 가격 영역 ──
   const priceLabel = car.priceType === 'price' ? '차량 가격' : '장기 렌트/리스';
-  ctx.fillStyle='#888'; ctx.font='24px sans-serif'; ctx.textAlign='center';
+  ctx.fillStyle= T.id==='dark' ? 'rgba(255,255,255,0.5)' : '#888';
+  ctx.font='24px sans-serif'; ctx.textAlign='center';
   ctx.fillText(priceLabel, W/2, 756);
-  ctx.fillStyle=BLUE; ctx.font='bold 80px sans-serif'; ctx.textAlign='center';
+  ctx.fillStyle=T.priceColor; ctx.font='bold 80px sans-serif'; ctx.textAlign='center';
   ctx.fillText(car.monthly||'금액을 입력하세요', W/2, 852);
   ctx.textAlign='left';
 }
@@ -686,6 +812,7 @@ function rr(ctx,x,y,w,h,r){
 }
 
 buildInputs();
+buildThemeGrid();
 </script>
 </body>
 </html>
