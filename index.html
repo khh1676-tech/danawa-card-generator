@@ -123,6 +123,10 @@
       <div class="sec">커버 카드 문구</div>
       <div class="cover-inputs">
         <div>
+          <input type="text" id="cb" value="다나와자동차" placeholder="상단 배지 텍스트">
+          <div class="hint">상단 파란 배지 안 문구</div>
+        </div>
+        <div>
           <input type="text" id="c1" value="가장 많이 찾는" placeholder="첫째 줄 (검정)">
           <div class="hint">검정 텍스트</div>
         </div>
@@ -313,11 +317,12 @@ async function drawCoverToCtx(ctx, slots) {
   ctx.moveTo(0, H*0.60); ctx.lineTo(0, H); ctx.lineTo(W*0.72, H);
   ctx.closePath(); ctx.fill();
 
+  const badgeText = document.getElementById('cb').value || '다나와자동차';
   ctx.font = 'bold 26px sans-serif';
-  const bw = ctx.measureText('다나와자동차').width + 48;
+  const bw = ctx.measureText(badgeText).width + 48;
   const bx = (W-bw)/2;
   ctx.fillStyle = BLUE; rr(ctx,bx,44,bw,46,23); ctx.fill();
-  ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.fillText('다나와자동차', W/2, 75);
+  ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.fillText(badgeText, W/2, 75);
 
   ctx.fillStyle = DARK; ctx.font = 'bold 72px sans-serif'; ctx.textAlign = 'center';
   ctx.fillText(line1, W/2, 192);
