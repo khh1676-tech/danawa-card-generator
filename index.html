@@ -105,6 +105,12 @@
   .theme-thumb { width: 100%; aspect-ratio: 4/5; display: block; }
   .theme-name { font-size: 10px; font-weight: 600; color: #64748B; text-align: center; padding: 4px 0; }
   .theme-item.active .theme-name { color: #1B5EF7; }
+
+  /* 카드 타입 탭 */
+  .card-type-tabs { display: flex; gap: 0; margin-bottom: 0; border-radius: 8px; overflow: hidden; border: 1px solid #E2E8F0; }
+  .ct-tab { flex: 1; padding: 8px 0; font-size: 12px; font-weight: 600; border: none; background: #F8FAFC; color: #94A3B8; cursor: pointer; transition: all 0.15s; }
+  .ct-tab.active { background: #1B5EF7; color: #fff; }
+  .ct-tab:first-child { border-right: 1px solid #E2E8F0; }
 </style>
 </head>
 <body>
@@ -112,9 +118,14 @@
   <div class="input-panel">
     <div class="ip-header">
       <h1>다나와자동차 카드 생성기</h1>
-      <p>카카오채널 주간 소식 이미지</p>
+      <p style="margin-bottom:10px">카카오채널 이미지 생성기</p>
+      <div class="card-type-tabs">
+        <button class="ct-tab active" id="tab-news" onclick="switchCardType('news')">📋 채널 소식</button>
+        <button class="ct-tab" id="tab-msg" onclick="switchCardType('msg')">💬 카카오 메시지</button>
+      </div>
     </div>
     <div class="ip-body">
+      <div class="news-only">
       <div class="sec">카드 테마</div>
       <div class="theme-grid" id="theme-grid"></div>
 
@@ -155,6 +166,62 @@
       </div>
       <div class="sec">차량 정보 (6대)</div>
       <div id="car-list"></div>
+      </div><!-- /news-only -->
+
+      <div class="msg-only" style="display:none">
+      <div class="sec">카드 테마</div>
+      <div class="theme-grid" id="msg-theme-grid"></div>
+      <div class="sec">배경 레이아웃</div>
+      <div class="theme-grid" id="msg-layout-grid"></div>
+      <div class="sec">발행 기간</div>
+      <div class="period-row">
+        <input type="text" id="msg-y" value="2026" placeholder="연도" oninput="document.getElementById('y').value=this.value">
+        <select id="msg-mo" onchange="document.getElementById('mo').value=this.value">
+          <option>1월</option><option>2월</option><option>3월</option>
+          <option selected>4월</option><option>5월</option><option>6월</option>
+          <option>7월</option><option>8월</option><option>9월</option>
+          <option>10월</option><option>11월</option><option>12월</option>
+        </select>
+        <select id="msg-wk" onchange="document.getElementById('wk').value=this.value">
+          <option>1주차</option><option>2주차</option>
+          <option>3주차</option><option>4주차</option><option>5주차</option>
+        </select>
+      </div>
+      <div class="sec">메시지 문구</div>
+      <div class="cover-inputs">
+        <div>
+          <input type="text" id="msg-cb" value="다나와자동차" placeholder="상단 배지 텍스트" oninput="document.getElementById('cb').value=this.value">
+          <div class="hint">상단 배지</div>
+        </div>
+        <div>
+          <input type="text" id="msg-c1" value="가장 많이 찾는" placeholder="첫째 줄" oninput="document.getElementById('c1').value=this.value">
+          <div class="hint">메인 텍스트 1줄</div>
+        </div>
+        <div>
+          <input type="text" id="msg-c2" value="차량만 모았어요!" placeholder="둘째 줄 (강조)" oninput="document.getElementById('c2').value=this.value">
+          <div class="hint">강조 텍스트</div>
+        </div>
+        <div>
+          <input type="text" id="msg-cs" value="렌트·리스 인기 차종, 월 17만원대부터" placeholder="서브텍스트" oninput="document.getElementById('cs').value=this.value">
+          <div class="hint">서브 설명 (자동 줄바꿈)</div>
+        </div>
+      </div>
+      <div class="sec">차량 이미지</div>
+      <div class="car-block">
+        <div class="f2">
+          <div class="fg"><label>차량 이름</label><input type="text" id="msg-car-name" placeholder="예) 기아 카니발"></div>
+          <div class="fg"><label>가격/월납</label><input type="text" id="msg-car-price" placeholder="예) 월 28만원~"></div>
+        </div>
+        <div class="fg">
+          <label>차량 이미지</label>
+          <div class="img-upload-area">
+            <div class="img-status" id="msg-img-status">이미지를 선택해주세요</div>
+            <button class="up-btn" onclick="document.getElementById('msg-img-file').click()">파일 선택</button>
+            <input type="file" id="msg-img-file" accept="image/*" style="display:none" onchange="loadMsgFile(this)">
+          </div>
+        </div>
+      </div>
+      </div><!-- /msg-only -->
     </div>
     <div class="ip-footer">
       <button class="btn-gen" onclick="renderAll()">미리보기 생성</button>
@@ -166,6 +233,9 @@
     <div class="pv-head">
       <h2>미리보기</h2>
       <span id="pv-period">—</span>
+    </div>
+    <div id="pv-type-badge" style="margin-bottom:10px;display:none">
+      <span style="display:inline-block;padding:3px 10px;font-size:11px;font-weight:600;border-radius:12px;background:#EEF3FF;color:#1B5EF7;">💬 카카오 메시지 800×600</span>
     </div>
     <div class="pv-grid" id="pv-grid">
       <div class="empty">입력 후 <strong>미리보기 생성</strong>을 눌러주세요<br>커버 1장 + 차량 카드 6장</div>
@@ -230,6 +300,49 @@
 </div>
 
 <canvas id="rc"></canvas>
+
+<!-- 메시지 카드 차량 위치 편집 모달 -->
+<div class="edit-modal-bg" id="msg-edit-modal-bg">
+  <div class="edit-modal">
+    <div class="edit-modal-header">
+      <h3>메시지 카드 차량 위치 편집</h3>
+      <button class="close-btn" onclick="closeMsgEditModal()">✕</button>
+    </div>
+    <div class="edit-tip">차량을 <span>드래그</span>해서 위치를 조정하거나, 아래 슬라이더로 세밀하게 조정하세요</div>
+    <div class="edit-canvas-wrap">
+      <canvas id="msg-edit-canvas"></canvas>
+    </div>
+    <div class="edit-controls">
+      <div class="edit-sliders">
+        <div class="slider-group">
+          <label>X 위치</label>
+          <div class="slider-row">
+            <input type="range" id="msg-sl-x" min="0" max="800" step="1" oninput="onMsgSlider('x',this.value)">
+            <input type="number" id="msg-num-x" min="0" max="800" step="1" oninput="onMsgNumber('x',this.value)">
+          </div>
+        </div>
+        <div class="slider-group">
+          <label>Y 위치</label>
+          <div class="slider-row">
+            <input type="range" id="msg-sl-y" min="0" max="600" step="1" oninput="onMsgSlider('y',this.value)">
+            <input type="number" id="msg-num-y" min="0" max="600" step="1" oninput="onMsgNumber('y',this.value)">
+          </div>
+        </div>
+        <div class="slider-group">
+          <label>크기 (%)</label>
+          <div class="slider-row">
+            <input type="range" id="msg-sl-s" min="20" max="250" step="1" oninput="onMsgSlider('s',this.value)">
+            <input type="number" id="msg-num-s" min="20" max="250" step="1" oninput="onMsgNumber('s',this.value)">
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="edit-footer-btns">
+      <button class="btn-reset" onclick="resetMsgSlot()">기본값으로</button>
+      <button class="btn-apply" onclick="applyMsgEdit()">적용하기</button>
+    </div>
+  </div>
+</div>
 
 <script>
 const W = 600, H = 800;
@@ -303,27 +416,29 @@ const THEMES = [
 let activeTheme = THEMES[0];
 
 function buildThemeGrid() {
-  const grid = document.getElementById('theme-grid');
-  grid.innerHTML = '';
-  THEMES.forEach((t, i) => {
-    const item = document.createElement('div');
-    item.className = 'theme-item' + (i === 0 ? ' active' : '');
-    item.onclick = () => selectTheme(i);
-    item.id = 'theme-' + t.id;
+  ['theme-grid', 'msg-theme-grid'].forEach((gridId, gi) => {
+    const grid = document.getElementById(gridId);
+    if (!grid) return;
+    grid.innerHTML = '';
+    THEMES.forEach((t, i) => {
+      const item = document.createElement('div');
+      item.className = 'theme-item' + (i === 0 ? ' active' : '');
+      item.onclick = () => selectTheme(i);
+      item.id = gridId + '-theme-' + t.id;
 
-    // 썸네일 캔버스
-    const tc = document.createElement('canvas');
-    tc.className = 'theme-thumb';
-    tc.width = 80; tc.height = 100;
-    drawThumbCanvas(tc, t);
+      const tc = document.createElement('canvas');
+      tc.className = 'theme-thumb';
+      tc.width = 80; tc.height = 100;
+      drawThumbCanvas(tc, t);
 
-    const name = document.createElement('div');
-    name.className = 'theme-name';
-    name.textContent = t.name;
+      const name = document.createElement('div');
+      name.className = 'theme-name';
+      name.textContent = t.name;
 
-    item.appendChild(tc);
-    item.appendChild(name);
-    grid.appendChild(item);
+      item.appendChild(tc);
+      item.appendChild(name);
+      grid.appendChild(item);
+    });
   });
 }
 
@@ -346,10 +461,20 @@ function drawThumbCanvas(tc, t) {
 
 function selectTheme(i) {
   activeTheme = THEMES[i];
-  document.querySelectorAll('.theme-item').forEach((el, j) => el.classList.toggle('active', j === i));
-  // 레이아웃 썸네일도 현재 테마 색으로 갱신
-  document.querySelectorAll('#layout-grid .theme-thumb').forEach((tc, j) => drawLayoutThumb(tc, LAYOUTS[j]));
+  // 각 그리드 내부에서 독립적으로 active 처리
+  ['theme-grid', 'msg-theme-grid'].forEach(gridId => {
+    const grid = document.getElementById(gridId);
+    if (!grid) return;
+    grid.querySelectorAll('.theme-item').forEach((el, j) => el.classList.toggle('active', j === i));
+  });
+  // 레이아웃 썸네일 테마 색상 갱신
+  ['layout-grid', 'msg-layout-grid'].forEach(gridId => {
+    const grid = document.getElementById(gridId);
+    if (!grid) return;
+    grid.querySelectorAll('.theme-thumb').forEach((tc, j) => drawLayoutThumb(tc, LAYOUTS[j]));
+  });
 }
+
 
 /* ══════════════════════════════════
    레이아웃 정의
@@ -363,25 +488,28 @@ const LAYOUTS = [
 let activeLayout = LAYOUTS[0];
 
 function buildLayoutGrid() {
-  const grid = document.getElementById('layout-grid');
-  grid.innerHTML = '';
-  LAYOUTS.forEach((l, i) => {
-    const item = document.createElement('div');
-    item.className = 'theme-item' + (i === 0 ? ' active' : '');
-    item.onclick = () => selectLayout(i);
+  ['layout-grid', 'msg-layout-grid'].forEach(gridId => {
+    const grid = document.getElementById(gridId);
+    if (!grid) return;
+    grid.innerHTML = '';
+    LAYOUTS.forEach((l, i) => {
+      const item = document.createElement('div');
+      item.className = 'theme-item' + (i === 0 ? ' active' : '');
+      item.onclick = () => selectLayout(i);
 
-    const tc = document.createElement('canvas');
-    tc.className = 'theme-thumb';
-    tc.width = 80; tc.height = 100;
-    drawLayoutThumb(tc, l);
+      const tc = document.createElement('canvas');
+      tc.className = 'theme-thumb';
+      tc.width = 80; tc.height = 100;
+      drawLayoutThumb(tc, l);
 
-    const name = document.createElement('div');
-    name.className = 'theme-name';
-    name.textContent = l.name;
+      const name = document.createElement('div');
+      name.className = 'theme-name';
+      name.textContent = l.name;
 
-    item.appendChild(tc);
-    item.appendChild(name);
-    grid.appendChild(item);
+      item.appendChild(tc);
+      item.appendChild(name);
+      grid.appendChild(item);
+    });
   });
 }
 
@@ -518,7 +646,11 @@ function drawLayoutThumb(tc, l) {
 
 function selectLayout(i) {
   activeLayout = LAYOUTS[i];
-  document.querySelectorAll('#layout-grid .theme-item').forEach((el,j) => el.classList.toggle('active', j===i));
+  ['layout-grid', 'msg-layout-grid'].forEach(gridId => {
+    const grid = document.getElementById(gridId);
+    if (!grid) return;
+    grid.querySelectorAll('.theme-item').forEach((el, j) => el.classList.toggle('active', j === i));
+  });
 }
 
 /* ── 커버 배경 드로우 (레이아웃별 분기) ── */
@@ -798,6 +930,7 @@ async function drawCarCard(ctx, car) {
 
 /* ── 렌더 ── */
 async function renderAll() {
+  if (activeCardType === 'msg') { await renderMsgCard(); return; }
   const period = getPeriod();
   document.getElementById('pv-period').textContent = period;
   const cvs = document.getElementById('rc');
@@ -1092,6 +1225,7 @@ function dlOne(idx) {
   }, 'image/png');
 }
 function downloadAll() {
+  if (activeCardType === 'msg') { dlMsgCard(); return; }
   if(!window._res){alert('먼저 미리보기 생성을 눌러주세요');return;}
   window._res.forEach((_,i)=>setTimeout(()=>dlOne(i),i*300));
 }
@@ -1108,6 +1242,398 @@ function rr(ctx,x,y,w,h,r){
 buildInputs();
 buildThemeGrid();
 buildLayoutGrid();
+
+/* ══════════════════════════════════
+   카드 타입 전환
+══════════════════════════════════ */
+let activeCardType = 'news'; // 'news' | 'msg'
+
+function loadMsgFile(input) {
+  const file = input.files[0]; if (!file) return;
+  const st = document.getElementById('msg-img-status');
+  st.textContent = '로딩 중...'; st.className = 'img-status';
+  const r = new FileReader();
+  r.onload = e => {
+    const img = new Image();
+    img.onload = () => {
+      window._msgCarImg = img;
+      st.textContent = '✓ 등록 완료'; st.className = 'img-status done';
+    };
+    img.src = e.target.result;
+  };
+  r.readAsDataURL(file);
+}
+
+function switchCardType(type) {
+  activeCardType = type;
+  document.getElementById('tab-news').classList.toggle('active', type === 'news');
+  document.getElementById('tab-msg').classList.toggle('active', type === 'msg');
+  // 소식 전용 섹션 (커버 문구, 차량 6대, 테마/레이아웃) 표시 여부
+  const newsOnly = document.querySelectorAll('.news-only');
+  newsOnly.forEach(el => el.style.display = type === 'news' ? '' : 'none');
+  const msgOnly = document.querySelectorAll('.msg-only');
+  msgOnly.forEach(el => el.style.display = type === 'msg' ? '' : 'none');
+  // 미리보기 초기화
+  document.getElementById('pv-grid').innerHTML = '<div class="empty">입력 후 <strong>미리보기 생성</strong>을 눌러주세요</div>';
+  document.getElementById('pv-type-badge').style.display = type === 'msg' ? '' : 'none';
+}
+
+/* ══════════════════════════════════
+   카카오 메시지 와이드형 (800×600)
+   레이아웃: 좌-텍스트 / 우-차량 이미지
+══════════════════════════════════ */
+const MW = 800, MH = 600;
+const MSG_FOOTER_H = 52;
+
+async function drawMsgCard(ctx, slot) {
+  const msgSlot = slot || msgImgSlot;
+  const T = activeTheme;
+  const L = activeLayout.id;
+
+  // ── 배경 ──
+  // 기존 배경 함수를 800×600에 맞게 임시로 W/H를 덮어쓰기
+  const origFill = (color) => { ctx.fillStyle = color; ctx.fillRect(0, 0, MW, MH); };
+
+  if (L === 'triangle') {
+    ctx.fillStyle = T.bg; ctx.fillRect(0, 0, MW, MH);
+    ctx.fillStyle = T.coverTriColor;
+    ctx.beginPath();
+    // 우하단 삼각형 (가로 카드 느낌)
+    ctx.moveTo(MW * 0.48, MH);
+    ctx.lineTo(MW, MH * 0.38);
+    ctx.lineTo(MW, MH);
+    ctx.closePath(); ctx.fill();
+
+  } else if (L === 'roundbar') {
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, MW, MH);
+    const blobs = [
+      {x: MW*0.20, y: MH*0.40, r: MW*0.55, c: T.accent},
+      {x: MW*0.80, y: MH*0.20, r: MW*0.42, c: T.coverTriColor},
+      {x: MW*0.10, y: MH*0.88, r: MW*0.35, c: T.accent},
+    ];
+    blobs.forEach(b => {
+      const hex = b.c.replace('#','');
+      const ar=parseInt(hex.slice(0,2),16), ag=parseInt(hex.slice(2,4),16), ab=parseInt(hex.slice(4,6),16);
+      const g = ctx.createRadialGradient(b.x,b.y,0,b.x,b.y,b.r);
+      g.addColorStop(0, `rgba(${ar},${ag},${ab},0.40)`);
+      g.addColorStop(0.5, `rgba(${ar},${ag},${ab},0.14)`);
+      g.addColorStop(1, `rgba(${ar},${ag},${ab},0)`);
+      ctx.fillStyle = g; ctx.fillRect(0,0,MW,MH);
+    });
+
+  } else if (L === 'polygon') {
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, MW, MH);
+    drawLowPoly(ctx, MW, MH, T);
+
+  } else if (L === 'blob') {
+    // blob: 기존 drawLightRay를 MW×MH로 호출
+    const hex = T.accent.replace('#','');
+    const ar=parseInt(hex.slice(0,2),16), ag=parseInt(hex.slice(2,4),16), ab=parseInt(hex.slice(4,6),16);
+    const mix = (c, w2) => Math.round(c*(1-w2)+255*w2);
+    const br=mix(ar,0.30), bg2=mix(ag,0.35), bb=mix(ab,0.30);
+    const dr=mix(ar,0.15), dg=mix(ag,0.18), db=mix(ab,0.15);
+    const bgG = ctx.createLinearGradient(MW,0,0,MH);
+    bgG.addColorStop(0, `rgb(${br},${bg2},${bb})`);
+    bgG.addColorStop(0.5, `rgb(${mix(br,0.1)},${mix(bg2,0.1)},${mix(bb,0.1)})`);
+    bgG.addColorStop(1, `rgb(${dr},${dg},${db})`);
+    ctx.fillStyle = bgG; ctx.fillRect(0,0,MW,MH);
+    // 빛줄기
+    [{cx:MW*0.18,angle:-0.52,width:MW*0.22,alpha:0.38},
+     {cx:MW*0.45,angle:-0.48,width:MW*0.32,alpha:0.52},
+     {cx:MW*0.72,angle:-0.50,width:MW*0.20,alpha:0.40}].forEach(ray => {
+      ctx.save(); ctx.translate(ray.cx, MH*0.5); ctx.rotate(ray.angle);
+      const rg = ctx.createLinearGradient(-ray.width,0,ray.width,0);
+      rg.addColorStop(0,'rgba(255,255,255,0)');
+      rg.addColorStop(0.3,`rgba(255,255,255,${ray.alpha*0.5})`);
+      rg.addColorStop(0.5,`rgba(255,255,255,${ray.alpha})`);
+      rg.addColorStop(0.7,`rgba(255,255,255,${ray.alpha*0.5})`);
+      rg.addColorStop(1,'rgba(255,255,255,0)');
+      ctx.fillStyle=rg; ctx.fillRect(-ray.width,-MH*0.8,ray.width*2,MH*1.6);
+      ctx.restore();
+    });
+    const rand=seededRand(77);
+    for(let i=0;i<60;i++){
+      const px=rand()*MW,py=rand()*MH,pr=rand()*2.2+0.5;
+      ctx.beginPath();ctx.arc(px,py,pr,0,Math.PI*2);
+      ctx.fillStyle=`rgba(255,255,255,${rand()*0.5+0.15})`;ctx.fill();
+    }
+  }
+
+  // ── 색상 계산 (커버 카드와 동일 로직) ──
+  const isBlob = (L === 'blob');
+  const isBrightBg = (L === 'roundbar' || L === 'polygon');
+  const isDark = (T.id === 'dark');
+  const TEXT_DARK_FORCED = '#1a1a2e';
+  const textMain   = isBlob ? '#ffffff' : (isBrightBg ? TEXT_DARK_FORCED : T.textDark);
+  const textAccent = isBlob ? 'rgba(255,255,255,0.92)' : T.accent;
+  const textSub    = isBlob ? 'rgba(255,255,255,0.72)' : (isBrightBg ? 'rgba(30,30,50,0.55)' : (isDark ? 'rgba(255,255,255,0.55)' : 'rgba(40,40,60,0.55)'));
+
+  // ── 좌측 텍스트 영역 (x: 0 ~ MW*0.50) ──
+  const TX = 44;  // 텍스트 좌측 여백
+  const TY_TOP = 80; // 텍스트 시작 Y
+
+  const badgeText = document.getElementById('cb').value || '다나와자동차';
+  const line1 = document.getElementById('c1').value || '가장 많이 찾는';
+  const line2 = document.getElementById('c2').value || '차량만 모았어요!';
+  const sub   = document.getElementById('cs').value || '';
+
+  // 배지
+  ctx.font = 'bold 17px sans-serif';
+  const bw = ctx.measureText(badgeText).width + 36;
+  if (isBlob) {
+    ctx.fillStyle = 'rgba(255,255,255,0.22)'; rr(ctx, TX, TY_TOP-26, bw, 30, 15); ctx.fill();
+    ctx.strokeStyle='rgba(255,255,255,0.65)'; ctx.lineWidth=1.5;
+    rr(ctx, TX, TY_TOP-26, bw, 30, 15); ctx.stroke();
+    ctx.shadowColor='rgba(0,0,0,0.25)'; ctx.shadowBlur=6;
+    ctx.fillStyle='#fff'; ctx.textAlign='left'; ctx.fillText(badgeText, TX+18, TY_TOP-5);
+  } else {
+    ctx.fillStyle = T.accent; rr(ctx, TX, TY_TOP-26, bw, 30, 15); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.textAlign='left'; ctx.fillText(badgeText, TX+18, TY_TOP-5);
+  }
+  ctx.shadowColor='transparent'; ctx.shadowBlur=0;
+
+  // 메인 텍스트
+  ctx.font = 'bold 46px sans-serif'; ctx.textAlign = 'left';
+  if (isBlob) { ctx.shadowColor='rgba(0,0,0,0.30)'; ctx.shadowBlur=14; }
+  ctx.fillStyle = textMain;
+  ctx.fillText(line1, TX, TY_TOP + 60);
+  ctx.fillStyle = textAccent;
+  ctx.fillText(line2, TX, TY_TOP + 116);
+  ctx.shadowColor='transparent'; ctx.shadowBlur=0;
+
+  // 서브텍스트
+  ctx.fillStyle = textSub;
+  ctx.font = '18px sans-serif';
+  // 긴 텍스트 줄바꿈 (최대 너비 MW*0.46)
+  const maxW = MW * 0.46;
+  const words = sub.split('');
+  let line = '', lines = [];
+  for (const ch of sub) {
+    const test = line + ch;
+    if (ctx.measureText(test).width > maxW) { lines.push(line); line = ch; }
+    else line = test;
+  }
+  if (line) lines.push(line);
+  lines.forEach((l, i) => ctx.fillText(l, TX, TY_TOP + 152 + i * 26));
+
+  ctx.textAlign = 'left';
+
+  // ── 우측 차량 이미지 영역 ──
+  const msgImg = window._msgCarImg || null;
+  const msgCarName = document.getElementById('msg-car-name')?.value || '';
+  const msgCarPrice = document.getElementById('msg-car-price')?.value || '';
+  const imgAreaX = MW * 0.46;
+  const imgAreaY = 0;
+  const imgAreaW = MW - imgAreaX;
+  const imgAreaH = MH - MSG_FOOTER_H;
+
+  // ── 우측 차량 이미지 (슬롯 기반) ──
+  const imgAreaH2 = MH; // 푸터 없으므로 전체 높이
+  if (msgImg) {
+    const BASE_W = 500;
+    const drawW = BASE_W * msgSlot.scale / 100;
+    const aspect = msgImg.height / msgImg.width;
+    const drawH = drawW * aspect;
+    ctx.drawImage(msgImg, msgSlot.x - drawW/2, msgSlot.y - drawH/2, drawW, drawH);
+
+    // 차량명 + 가격 오버레이 (우하단)
+    ctx.textAlign = 'right';
+    if (msgCarName) {
+      if (isBlob) { ctx.shadowColor='rgba(0,0,0,0.4)'; ctx.shadowBlur=8; }
+      ctx.fillStyle = textMain; ctx.font = 'bold 22px sans-serif';
+      ctx.fillText(msgCarName, MW - 28, MH - 44);
+      if (msgCarPrice) {
+        ctx.fillStyle = textAccent; ctx.font = 'bold 28px sans-serif';
+        ctx.fillText(msgCarPrice, MW - 28, MH - 14);
+      }
+      ctx.shadowColor='transparent'; ctx.shadowBlur=0;
+    }
+    ctx.textAlign = 'left';
+  } else {
+    ctx.fillStyle = 'rgba(0,0,0,0.05)';
+    rr(ctx, imgAreaX+10, 20, imgAreaW-20, imgAreaH2-40, 12); ctx.fill();
+    ctx.fillStyle = 'rgba(0,0,0,0.20)'; ctx.font='15px sans-serif'; ctx.textAlign='center';
+    ctx.fillText('차량 이미지', imgAreaX + imgAreaW/2, imgAreaH2/2 + 6);
+    ctx.textAlign = 'left';
+  }
+}
+
+/* ── 메시지 카드 차량 슬롯 상태 ── */
+const MSG_DEFAULT_SLOT = { x: 590, y: 300, scale: 100 };
+let msgImgSlot = { ...MSG_DEFAULT_SLOT };
+let msgDragState = null;
+
+const MSG_EC_W = 480, MSG_EC_H = 360; // 편집 캔버스 (800:600 = 4:3)
+const MSG_SCALE = MSG_EC_W / MW;
+
+function openMsgEditModal() {
+  document.getElementById('msg-edit-modal-bg').classList.add('open');
+  const ec = document.getElementById('msg-edit-canvas');
+  ec.width = MSG_EC_W; ec.height = MSG_EC_H;
+  syncMsgSliders();
+  renderMsgEditCanvas();
+  bindMsgDragEvents();
+}
+
+function closeMsgEditModal() {
+  document.getElementById('msg-edit-modal-bg').classList.remove('open');
+}
+
+function syncMsgSliders() {
+  document.getElementById('msg-sl-x').value  = msgImgSlot.x;
+  document.getElementById('msg-sl-y').value  = msgImgSlot.y;
+  document.getElementById('msg-sl-s').value  = msgImgSlot.scale;
+  document.getElementById('msg-num-x').value = Math.round(msgImgSlot.x);
+  document.getElementById('msg-num-y').value = Math.round(msgImgSlot.y);
+  document.getElementById('msg-num-s').value = Math.round(msgImgSlot.scale);
+}
+
+async function renderMsgEditCanvas() {
+  const ec = document.getElementById('msg-edit-canvas');
+  const ctx = ec.getContext('2d');
+  ctx.save();
+  ctx.scale(MSG_SCALE, MSG_SCALE);
+  await drawMsgCard(ctx, msgImgSlot);
+  ctx.restore();
+
+  // 선택 핸들 표시
+  const img = window._msgCarImg;
+  if (!img) return;
+  const ex = msgImgSlot.x * MSG_SCALE;
+  const ey = msgImgSlot.y * MSG_SCALE;
+  const BASE_W = 500 * msgImgSlot.scale / 100 * MSG_SCALE;
+  const BASE_H = BASE_W * (img.height / img.width);
+
+  ctx.strokeStyle = '#1B5EF7'; ctx.lineWidth = 2;
+  ctx.setLineDash([5,3]);
+  ctx.strokeRect(ex - BASE_W/2, ey - BASE_H/2, BASE_W, BASE_H);
+  ctx.setLineDash([]);
+  // 코너 핸들
+  const hs = 8;
+  [[ex-BASE_W/2, ey-BASE_H/2],[ex+BASE_W/2, ey-BASE_H/2],
+   [ex-BASE_W/2, ey+BASE_H/2],[ex+BASE_W/2, ey+BASE_H/2]].forEach(([hx,hy]) => {
+    ctx.fillStyle='#fff'; ctx.fillRect(hx-hs/2,hy-hs/2,hs,hs);
+    ctx.strokeStyle='#1B5EF7'; ctx.lineWidth=1.5; ctx.strokeRect(hx-hs/2,hy-hs/2,hs,hs);
+  });
+}
+
+function onMsgSlider(type, val) {
+  const v = parseFloat(val);
+  if (isNaN(v)) return;
+  if (type==='x') { msgImgSlot.x=v; document.getElementById('msg-num-x').value=Math.round(v); }
+  if (type==='y') { msgImgSlot.y=v; document.getElementById('msg-num-y').value=Math.round(v); }
+  if (type==='s') { msgImgSlot.scale=v; document.getElementById('msg-num-s').value=Math.round(v); }
+  renderMsgEditCanvas();
+}
+
+function onMsgNumber(type, val) {
+  const v = parseFloat(val);
+  if (isNaN(v)) return;
+  if (type==='x') { msgImgSlot.x=v; document.getElementById('msg-sl-x').value=v; }
+  if (type==='y') { msgImgSlot.y=v; document.getElementById('msg-sl-y').value=v; }
+  if (type==='s') { msgImgSlot.scale=v; document.getElementById('msg-sl-s').value=v; }
+  renderMsgEditCanvas();
+}
+
+function resetMsgSlot() {
+  msgImgSlot = { ...MSG_DEFAULT_SLOT };
+  syncMsgSliders();
+  renderMsgEditCanvas();
+}
+
+async function applyMsgEdit() {
+  closeMsgEditModal();
+  await renderMsgCard();
+}
+
+function bindMsgDragEvents() {
+  const ec = document.getElementById('msg-edit-canvas');
+  ec.onmousedown = e => {
+    const img = window._msgCarImg; if (!img) return;
+    const rect = ec.getBoundingClientRect();
+    const mx = (e.clientX - rect.left) / MSG_SCALE;
+    const my = (e.clientY - rect.top)  / MSG_SCALE;
+    const BASE_W = 500 * msgImgSlot.scale / 100;
+    const BASE_H = BASE_W * (img.height / img.width);
+    if (mx >= msgImgSlot.x-BASE_W/2 && mx <= msgImgSlot.x+BASE_W/2 &&
+        my >= msgImgSlot.y-BASE_H/2 && my <= msgImgSlot.y+BASE_H/2) {
+      msgDragState = { offsetX: mx - msgImgSlot.x, offsetY: my - msgImgSlot.y };
+      ec.style.cursor = 'grabbing';
+    }
+  };
+  ec.onmousemove = e => {
+    if (!msgDragState) return;
+    const rect = ec.getBoundingClientRect();
+    msgImgSlot.x = (e.clientX - rect.left) / MSG_SCALE - msgDragState.offsetX;
+    msgImgSlot.y = (e.clientY - rect.top)  / MSG_SCALE - msgDragState.offsetY;
+    syncMsgSliders();
+    renderMsgEditCanvas();
+  };
+  ec.onmouseup = () => { msgDragState=null; ec.style.cursor='default'; };
+  ec.onmouseleave = () => { msgDragState=null; ec.style.cursor='default'; };
+  // 터치
+  ec.ontouchstart = e => {
+    e.preventDefault();
+    const img = window._msgCarImg; if (!img) return;
+    const touch = e.touches[0];
+    const rect = ec.getBoundingClientRect();
+    const mx = (touch.clientX - rect.left) / MSG_SCALE;
+    const my = (touch.clientY - rect.top)  / MSG_SCALE;
+    const BASE_W = 500 * msgImgSlot.scale / 100;
+    const BASE_H = BASE_W * (img.height / img.width);
+    if (mx >= msgImgSlot.x-BASE_W/2 && mx <= msgImgSlot.x+BASE_W/2 &&
+        my >= msgImgSlot.y-BASE_H/2 && my <= msgImgSlot.y+BASE_H/2) {
+      msgDragState = { offsetX: mx - msgImgSlot.x, offsetY: my - msgImgSlot.y };
+    }
+  };
+  ec.ontouchmove = e => {
+    e.preventDefault(); if (!msgDragState) return;
+    const touch = e.touches[0];
+    const rect = ec.getBoundingClientRect();
+    msgImgSlot.x = (touch.clientX - rect.left) / MSG_SCALE - msgDragState.offsetX;
+    msgImgSlot.y = (touch.clientY - rect.top)  / MSG_SCALE - msgDragState.offsetY;
+    syncMsgSliders();
+    renderMsgEditCanvas();
+  };
+  ec.ontouchend = () => { msgDragState=null; };
+}
+
+async function renderMsgCard() {
+  const period = getPeriod();
+  document.getElementById('pv-period').textContent = period;
+  const cvs = document.getElementById('rc');
+  cvs.width = MW; cvs.height = MH;
+  const ctx = cvs.getContext('2d');
+  await drawMsgCard(ctx);
+  const result = { canvas: clone(cvs), label:'카카오 메시지', isCover: false };
+
+  const grid = document.getElementById('pv-grid');
+  grid.innerHTML = '';
+  const item = document.createElement('div'); item.className='pv-item';
+  const lbar = document.createElement('div'); lbar.className='pv-label';
+  lbar.innerHTML = `<span>카카오 메시지 (800×600)</span><div style="display:flex;gap:4px"><button onclick="dlMsgCard()">저장</button><button class="edit-btn" onclick="openMsgEditModal()">✏️ 위치 편집</button></div>`;
+  const cv = document.createElement('canvas'); cv.className='pv-canvas';
+  // 미리보기: 너비 맞추되 비율 유지 (800:600 = 4:3)
+  cv.width = 400; cv.height = 300;
+  cv.getContext('2d').drawImage(cvs, 0, 0, 400, 300);
+  item.appendChild(lbar); item.appendChild(cv);
+  grid.appendChild(item);
+  window._msgCanvas = result.canvas;
+  window._period = period;
+}
+
+function dlMsgCard() {
+  if (!window._msgCanvas) { alert('먼저 미리보기 생성을 눌러주세요'); return; }
+  const period = (window._period||'카카오메시지').replace(/ /g,'_');
+  window._msgCanvas.toBlob(blob => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `${period}_카카오메시지_800x600.png`;
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }, 'image/png');
+}
 </script>
 </body>
 </html>
