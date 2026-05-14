@@ -183,6 +183,11 @@
     </div>
     <div class="edit-controls">
       <div class="edit-car-tabs" id="edit-tabs"></div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;padding:8px 10px;background:#F8FAFC;border-radius:8px;border:1px solid #E2E8F0;">
+        <span id="vis-toggle-label" style="font-size:12px;font-weight:600;color:#0D1B3E;flex:1;">차량 1 이미지</span>
+        <button id="vis-toggle-btn" onclick="toggleVisActive()"
+          style="padding:5px 18px;font-size:12px;font-weight:700;border-radius:20px;border:1px solid;cursor:pointer;">ON</button>
+      </div>
       <div class="edit-sliders">
         <div class="slider-group">
           <label>X 위치</label>
@@ -343,9 +348,9 @@ function selectTheme(i) {
 
 // 커버 차량 위치 상태 (x, y = 차량 중심 기준, scale = 배율)
 const DEFAULT_SLOTS = [
-  { x: 180, y: 640, scale: 100, z: 1 },
-  { x: 560, y: 690, scale: 110, z: 2 },
-  { x: 370, y: 890, scale: 140, z: 3 },
+  { x: 180, y: 640, scale: 100, z: 1, visible: true },
+  { x: 560, y: 690, scale: 110, z: 2, visible: true },
+  { x: 370, y: 890, scale: 140, z: 3, visible: true },
 ];
 let coverSlots = DEFAULT_SLOTS.map(s => ({...s}));
 
@@ -453,8 +458,8 @@ async function drawCoverToCtx(ctx, slots) {
   ctx.font = '27px sans-serif'; ctx.fillText(sub, W/2, 328);
   ctx.textAlign = 'left';
 
-  // z순서 정렬 후 그리기
-  const ordered = [...slots].sort((a,b) => a.z - b.z);
+  // z순서 정렬 후 그리기 (visible:false 제외)
+  const ordered = [...slots].filter(s => s.visible !== false).sort((a,b) => a.z - b.z);
   for (const s of ordered) {
     const img = cars[s.cidx !== undefined ? s.cidx : slots.indexOf(s)].img;
     const cidx = s.cidx !== undefined ? s.cidx : ordered.indexOf(s);
@@ -605,6 +610,20 @@ function buildTabs() {
   });
 }
 
+function _setVisStyle(btn, visible) {
+  btn.textContent = visible ? 'ON' : 'OFF';
+  btn.style.background = visible ? '#1B5EF7' : '#E2E8F0';
+  btn.style.color = visible ? '#fff' : '#94A3B8';
+  btn.style.borderColor = visible ? '#1B5EF7' : '#CBD5E1';
+}
+
+function toggleVisActive() {
+  const s = editSlots[activeTab];
+  s.visible = !(s.visible !== false);
+  _setVisStyle(document.getElementById('vis-toggle-btn'), s.visible);
+  renderEditCanvas();
+}
+
 function selectTab(i) {
   activeTab = i;
   document.querySelectorAll('.edit-car-tab').forEach((b,j) => b.classList.toggle('active', j===i));
@@ -617,6 +636,12 @@ function selectTab(i) {
   document.getElementById('num-y').value = Math.round(s.y);
   document.getElementById('num-s').value = Math.round(s.scale);
   document.getElementById('num-z').value = s.z;
+  // ON/OFF 버튼 업데이트
+  const visBtn = document.getElementById('vis-toggle-btn');
+  if (visBtn) {
+    document.getElementById('vis-toggle-label').textContent = `차량 ${i+1} 이미지`;
+    _setVisStyle(visBtn, s.visible !== false);
+  }
 }
 
 function onSlider(type, val) {
@@ -774,7 +799,7 @@ function resetPositions() {
 }
 
 async function applyEdit() {
-  coverSlots = editSlots.map(s => ({x:s.x, y:s.y, scale:s.scale, z:s.z}));
+  coverSlots = editSlots.map(s => ({x:s.x, y:s.y, scale:s.scale, z:s.z, visible:s.visible}));
   closeEditModal();
   await renderAll();
 }
