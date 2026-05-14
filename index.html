@@ -10,7 +10,7 @@
   body { font-family: 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif; background: #ECEEF2; min-height: 100vh; }
   .app { display: grid; grid-template-columns: 400px 1fr; min-height: 100vh; }
 
-  .input-panel { background: #fff; border-right: 1px solid #E2E8F0; display: flex; flex-direction: column; }
+  .input-panel { background: #fff; border-right: 1px solid #E2E8F0; display: flex; flex-direction: column; height: 100vh; position: sticky; top: 0; }
   .ip-header { padding: 18px 22px 14px; border-bottom: 1px solid #F1F5F9; }
   .ip-header h1 { font-size: 15px; font-weight: 700; color: #0D1B3E; }
   .ip-header p { font-size: 11px; color: #94A3B8; margin-top: 2px; }
@@ -117,6 +117,9 @@
     <div class="ip-body">
       <div class="sec">카드 테마</div>
       <div class="theme-grid" id="theme-grid"></div>
+
+      <div class="sec">배경 레이아웃</div>
+      <div class="theme-grid" id="layout-grid"></div>
 
       <div class="sec">발행 기간</div>
       <div class="period-row">
@@ -344,15 +347,225 @@ function drawThumbCanvas(tc, t) {
 function selectTheme(i) {
   activeTheme = THEMES[i];
   document.querySelectorAll('.theme-item').forEach((el, j) => el.classList.toggle('active', j === i));
+  // 레이아웃 썸네일도 현재 테마 색으로 갱신
+  document.querySelectorAll('#layout-grid .theme-thumb').forEach((tc, j) => drawLayoutThumb(tc, LAYOUTS[j]));
 }
 
-// 커버 차량 위치 상태 (x, y = 차량 중심 기준, scale = 배율)
-const DEFAULT_SLOTS = [
-  { x: 180, y: 640, scale: 100, z: 1, visible: true },
-  { x: 560, y: 690, scale: 110, z: 2, visible: true },
-  { x: 370, y: 890, scale: 140, z: 3, visible: true },
+/* ══════════════════════════════════
+   레이아웃 정의
+══════════════════════════════════ */
+const LAYOUTS = [
+  { id: 'triangle', name: '삼각형' },
+  { id: 'roundbar', name: '라운드바' },
+  { id: 'polygon',  name: '폴리곤'  },
+  { id: 'blob',     name: '블롭'    },
 ];
-let coverSlots = DEFAULT_SLOTS.map(s => ({...s}));
+let activeLayout = LAYOUTS[0];
+
+function buildLayoutGrid() {
+  const grid = document.getElementById('layout-grid');
+  grid.innerHTML = '';
+  LAYOUTS.forEach((l, i) => {
+    const item = document.createElement('div');
+    item.className = 'theme-item' + (i === 0 ? ' active' : '');
+    item.onclick = () => selectLayout(i);
+
+    const tc = document.createElement('canvas');
+    tc.className = 'theme-thumb';
+    tc.width = 80; tc.height = 100;
+    drawLayoutThumb(tc, l);
+
+    const name = document.createElement('div');
+    name.className = 'theme-name';
+    name.textContent = l.name;
+
+    item.appendChild(tc);
+    item.appendChild(name);
+    grid.appendChild(item);
+  });
+}
+
+/* ── 헬퍼: 랜덤 시드 기반 pseudo-random ── */
+function seededRand(seed) {
+  let s = seed;
+  return () => { s = (s * 1664525 + 1013904223) & 0xffffffff; return (s >>> 0) / 0xffffffff; };
+}
+
+/* ── 로우폴리 삼각형 (폴리곤) ── */
+function drawLowPoly(ctx, w, h, T) {
+  const getColor = (y) => {
+    const t = Math.min(1, Math.max(0, y/h));
+    const hex = T.accent.replace('#','');
+    const ar=parseInt(hex.slice(0,2),16),ag=parseInt(hex.slice(2,4),16),ab=parseInt(hex.slice(4,6),16);
+    const r=Math.round(255+(ar-255)*t), g=Math.round(255+(ag-255)*t), b=Math.round(255+(ab-255)*t);
+    return 'rgb('+r+','+g+','+b+')';
+  };
+  const rand=seededRand(42);
+  const cols=6,rows=8,cellW=w/cols,cellH=h/rows;
+  const pts=[];
+  for(let r=0;r<=rows;r++){for(let c=0;c<=cols;c++){
+    pts.push({
+      x:c*cellW+(c>0&&c<cols?(rand()-0.5)*cellW*0.7:0),
+      y:r*cellH+(r>0&&r<rows?(rand()-0.5)*cellH*0.7:0)
+    });
+  }}
+  for(let r=0;r<rows;r++){for(let c=0;c<cols;c++){
+    const i=r*(cols+1)+c;
+    const a=pts[i],b=pts[i+1],d=pts[i+cols+1],e=pts[i+cols+2];
+    ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.lineTo(d.x,d.y);ctx.closePath();
+    ctx.fillStyle=getColor((a.y+b.y+d.y)/3);ctx.fill();
+    ctx.strokeStyle='rgba(255,255,255,0.15)';ctx.lineWidth=0.6;ctx.stroke();
+    ctx.beginPath();ctx.moveTo(b.x,b.y);ctx.lineTo(d.x,d.y);ctx.lineTo(e.x,e.y);ctx.closePath();
+    ctx.fillStyle=getColor((b.y+d.y+e.y)/3);ctx.fill();ctx.stroke();
+  }}
+}
+
+/* ── 소프트 방사형 그라데이션 (라운드바) ── */
+function drawSoftGradient(ctx, w, h, T) {
+  ctx.fillStyle='#ffffff';ctx.fillRect(0,0,w,h);
+  const blobs=[
+    {x:w*0.28,y:h*0.42,r:w*0.72,c:T.accent},
+    {x:w*0.82,y:h*0.20,r:w*0.55,c:T.coverTriColor},
+    {x:w*0.10,y:h*0.85,r:w*0.45,c:T.accent},
+  ];
+  blobs.forEach(b=>{
+    const hex=b.c.replace('#','');
+    const ar=parseInt(hex.slice(0,2),16),ag=parseInt(hex.slice(2,4),16),ab=parseInt(hex.slice(4,6),16);
+    const g=ctx.createRadialGradient(b.x,b.y,0,b.x,b.y,b.r);
+    g.addColorStop(0,'rgba('+ar+','+ag+','+ab+',0.42)');
+    g.addColorStop(0.5,'rgba('+ar+','+ag+','+ab+',0.16)');
+    g.addColorStop(1,'rgba('+ar+','+ag+','+ab+',0)');
+    ctx.fillStyle=g;ctx.fillRect(0,0,w,h);
+  });
+}
+
+/* ── 빛줄기 + 파티클 (블롭) ── */
+function drawLightRay(ctx, w, h, T) {
+  // 테마 accent 색을 HSL로 변환해 채도 낮추고 명도 조절해서 배경색 생성
+  const hex = T.accent.replace('#','');
+  const ar = parseInt(hex.slice(0,2),16);
+  const ag = parseInt(hex.slice(2,4),16);
+  const ab = parseInt(hex.slice(4,6),16);
+  // 배경: accent를 어둡고 부드럽게 — 원색에 흰색 섞기
+  const mix = (c, w2) => Math.round(c * (1-w2) + 255 * w2);
+  const br = mix(ar, 0.30), bg2 = mix(ag, 0.35), bb = mix(ab, 0.30);
+  const dr = mix(ar, 0.15), dg = mix(ag, 0.18), db = mix(ab, 0.15);
+
+  const bg = ctx.createLinearGradient(w, 0, 0, h);
+  bg.addColorStop(0,   `rgb(${br},${bg2},${bb})`);
+  bg.addColorStop(0.5, `rgb(${mix(br,0.1)},${mix(bg2,0.1)},${mix(bb,0.1)})`);
+  bg.addColorStop(1,   `rgb(${dr},${dg},${db})`);
+  ctx.fillStyle = bg; ctx.fillRect(0,0,w,h);
+
+  // 빛줄기 — 대각선
+  const rays = [
+    {cx: w*0.18, angle: -0.52, width: w*0.22, alpha: 0.38},
+    {cx: w*0.42, angle: -0.48, width: w*0.30, alpha: 0.55},
+    {cx: w*0.70, angle: -0.50, width: w*0.20, alpha: 0.42},
+  ];
+  rays.forEach(ray => {
+    ctx.save();
+    ctx.translate(ray.cx, h * 0.5);
+    ctx.rotate(ray.angle);
+    const g = ctx.createLinearGradient(-ray.width, 0, ray.width, 0);
+    g.addColorStop(0,   'rgba(255,255,255,0)');
+    g.addColorStop(0.3, `rgba(255,255,255,${ray.alpha * 0.5})`);
+    g.addColorStop(0.5, `rgba(255,255,255,${ray.alpha})`);
+    g.addColorStop(0.7, `rgba(255,255,255,${ray.alpha * 0.5})`);
+    g.addColorStop(1,   'rgba(255,255,255,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(-ray.width, -h * 0.8, ray.width * 2, h * 1.6);
+    ctx.restore();
+  });
+
+  // 파티클
+  const rand = seededRand(77);
+  const pCount = w > 200 ? 55 : 10;
+  for (let i = 0; i < pCount; i++) {
+    const px = rand()*w, py = rand()*h, pr = rand()*2.2+0.5;
+    ctx.beginPath(); ctx.arc(px, py, pr, 0, Math.PI*2);
+    ctx.fillStyle = `rgba(255,255,255,${rand()*0.5+0.15})`; ctx.fill();
+  }
+}
+
+function drawLayoutThumb(tc, l) {
+  const ctx = tc.getContext('2d');
+  const tw = 80, th = 100;
+  const T = activeTheme;
+  ctx.fillStyle = T.bg; ctx.fillRect(0,0,tw,th);
+
+  if (l.id === 'triangle') {
+    ctx.fillStyle = T.coverTriColor + 'CC';
+    ctx.beginPath(); ctx.moveTo(0,th*0.55); ctx.lineTo(0,th); ctx.lineTo(tw*0.72,th); ctx.closePath(); ctx.fill();
+
+  } else if (l.id === 'roundbar') {
+    drawSoftGradient(ctx, tw, th, T);
+
+  } else if (l.id === 'polygon') {
+    drawLowPoly(ctx, tw, th, T);
+
+  } else if (l.id === 'blob') {
+    drawLightRay(ctx, tw, th, T);
+
+  }
+
+  // 공통: 배지 + 텍스트 줄
+  ctx.fillStyle=T.accent;
+  ctx.beginPath();ctx.roundRect(tw*0.2,6,tw*0.6,10,5);ctx.fill();
+  ctx.fillStyle=T.textDark;ctx.fillRect(tw*0.12,22,tw*0.55,5);
+  ctx.fillStyle=T.accent;ctx.fillRect(tw*0.12,31,tw*0.72,7);
+}
+
+function selectLayout(i) {
+  activeLayout = LAYOUTS[i];
+  document.querySelectorAll('#layout-grid .theme-item').forEach((el,j) => el.classList.toggle('active', j===i));
+}
+
+/* ── 커버 배경 드로우 (레이아웃별 분기) ── */
+function drawCoverBg(ctx) {
+  const T = activeTheme;
+  if (activeLayout.id === 'triangle') {
+    ctx.fillStyle = T.bg; ctx.fillRect(0,0,W,H);
+    ctx.fillStyle = T.coverTriColor;
+    ctx.beginPath();
+    ctx.moveTo(0,H*0.60); ctx.lineTo(0,H); ctx.lineTo(W*0.72,H);
+    ctx.closePath(); ctx.fill();
+
+  } else if (activeLayout.id === 'roundbar') {
+    drawSoftGradient(ctx, W, H, T);
+
+  } else if (activeLayout.id === 'polygon') {
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,W,H);
+    drawLowPoly(ctx, W, H, T);
+
+  } else if (activeLayout.id === 'blob') {
+    drawLightRay(ctx, W, H, T);
+
+  }
+}
+
+/* ── 차량카드 배경 드로우 (레이아웃별 분기) ── */
+function drawCardBg(ctx) {
+  const T = activeTheme;
+  if (activeLayout.id === 'triangle') {
+    ctx.fillStyle = T.bg; ctx.fillRect(0,0,W,H);
+    ctx.beginPath();ctx.arc(W+80,H+80,360,0,Math.PI*2);
+    ctx.fillStyle=T.cardDeco1;ctx.fill();
+    ctx.beginPath();ctx.arc(-80,-80,360,0,Math.PI*2);
+    ctx.fillStyle=T.cardDeco2;ctx.fill();
+
+  } else if (activeLayout.id === 'roundbar') {
+    drawSoftGradient(ctx, W, H, T);
+
+  } else if (activeLayout.id === 'polygon') {
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,W,H);
+    drawLowPoly(ctx, W, H, T);
+
+  } else if (activeLayout.id === 'blob') {
+    drawLightRay(ctx, W, H, T);
+  }
+}
+
 
 /* ── 폼 생성 ── */
 function buildInputs() {
@@ -408,15 +621,6 @@ function getPeriod() {
   return `${document.getElementById('y').value||'2026'} ${document.getElementById('mo').value} ${document.getElementById('wk').value}`;
 }
 
-function rr(ctx, x, y, w, h, r) {
-  ctx.beginPath();
-  ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y); ctx.quadraticCurveTo(x+w,y,x+w,y+r);
-  ctx.lineTo(x+w,y+h-r); ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
-  ctx.lineTo(x+r,y+h); ctx.quadraticCurveTo(x,y+h,x,y+h-r);
-  ctx.lineTo(x,y+r); ctx.quadraticCurveTo(x,y,x+r,y);
-  ctx.closePath();
-}
-
 function drawFooter(ctx) {
   ctx.fillStyle = BLUE;
   ctx.fillRect(0, H - FOOTER_H, W, FOOTER_H);
@@ -430,38 +634,67 @@ function drawFooter(ctx) {
   ctx.textAlign = 'left';
 }
 
-/* ── 커버 카드 드로우 (슬롯 데이터 사용) ── */
+// 커버 차량 위치 상태 (x, y = 차량 중심 기준, scale = 배율)
+/* ── 커버 카드 드로우 ── */
 async function drawCoverToCtx(ctx, slots) {
   const line1 = document.getElementById('c1').value || '가장 많이 찾는';
   const line2 = document.getElementById('c2').value || '차량만 모았어요!';
   const sub   = document.getElementById('cs').value || '';
-
   const T = activeTheme;
-  ctx.fillStyle = T.bg; ctx.fillRect(0,0,W,H);
+  const L = activeLayout.id;
 
-  ctx.fillStyle = T.coverTriColor;
-  ctx.beginPath();
-  ctx.moveTo(0, H*0.60); ctx.lineTo(0, H); ctx.lineTo(W*0.72, H);
-  ctx.closePath(); ctx.fill();
+  drawCoverBg(ctx);
 
   const badgeText = document.getElementById('cb').value || '다나와자동차';
+
+  // 배경 밝기 판단
+  // - blob: 항상 어두운 배경 → 흰 텍스트
+  // - roundbar/polygon: 배경이 항상 밝음(흰색 베이스) → 어두운 텍스트 강제
+  // - triangle: 테마 bg 위 → 테마 색상 그대로
+  const isBlob = (L === 'blob');
+  const isBrightBg = (L === 'roundbar' || L === 'polygon'); // 배경이 항상 밝음
+  const isDark = (T.id === 'dark');
+
+  // 밝은 배경(roundbar/polygon)에서는 다크 테마여도 어두운 텍스트 강제
+  const TEXT_DARK_FORCED = '#1a1a2e';
+  const ACCENT_ON_BRIGHT = isBrightBg ? T.accent : T.accent; // accent는 그대로
+  const textMain  = isBlob ? '#ffffff' : (isBrightBg ? TEXT_DARK_FORCED : T.textDark);
+  const textAccent= isBlob ? 'rgba(255,255,255,0.92)' : ACCENT_ON_BRIGHT;
+  const textSub   = isBlob ? 'rgba(255,255,255,0.72)'
+                           : (isBrightBg ? 'rgba(30,30,50,0.55)' : (isDark ? 'rgba(255,255,255,0.55)' : 'rgba(40,40,60,0.55)'));
+
   ctx.font = 'bold 26px sans-serif';
   const bw = ctx.measureText(badgeText).width + 48;
   const bx = (W-bw)/2;
-  ctx.fillStyle = T.accent; rr(ctx,bx,44,bw,46,23); ctx.fill();
-  ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.fillText(badgeText, W/2, 75);
 
-  ctx.fillStyle = T.textDark; ctx.font = 'bold 72px sans-serif'; ctx.textAlign = 'center';
-  ctx.fillText(line1, W/2, 192);
-  ctx.fillStyle = T.accent; ctx.fillText(line2, W/2, 276);
-  ctx.fillStyle = T.id === 'dark' ? 'rgba(255,255,255,0.55)' : '#555';
+  if (isBlob) {
+    // 블롭: 반투명 흰 테두리 배지
+    ctx.fillStyle = 'rgba(255,255,255,0.22)'; rr(ctx,bx,44,bw,46,23); ctx.fill();
+    ctx.strokeStyle='rgba(255,255,255,0.65)'; ctx.lineWidth=1.5;
+    rr(ctx,bx,44,bw,46,23); ctx.stroke();
+    ctx.shadowColor='rgba(0,0,0,0.25)'; ctx.shadowBlur=8;
+    ctx.fillStyle='#fff'; ctx.textAlign='center'; ctx.fillText(badgeText, W/2, 75);
+    ctx.font='bold 72px sans-serif';
+    ctx.shadowColor='rgba(0,0,0,0.30)'; ctx.shadowBlur=16;
+  } else {
+    // triangle/roundbar/polygon: accent 배지
+    ctx.fillStyle = T.accent; rr(ctx,bx,44,bw,46,23); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.textAlign='center'; ctx.fillText(badgeText, W/2, 75);
+    ctx.font='bold 72px sans-serif'; ctx.textAlign='center';
+  }
+
+  ctx.fillStyle = textMain; ctx.fillText(line1, W/2, 192);
+  ctx.fillStyle = textAccent; ctx.fillText(line2, W/2, 276);
+  ctx.fillStyle = textSub;
   ctx.font = '27px sans-serif'; ctx.fillText(sub, W/2, 328);
-  ctx.textAlign = 'left';
+  ctx.shadowColor='transparent'; ctx.shadowBlur=0;
 
-  // z순서 정렬 후 그리기 (visible:false 제외)
+  ctx.textAlign = 'left';
+  ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
+
+  // 차량 이미지 그리기 (visible 필터)
   const ordered = [...slots].filter(s => s.visible !== false).sort((a,b) => a.z - b.z);
   for (const s of ordered) {
-    const img = cars[s.cidx !== undefined ? s.cidx : slots.indexOf(s)].img;
     const cidx = s.cidx !== undefined ? s.cidx : ordered.indexOf(s);
     const carImg = cars[cidx].img;
     const BASE_W = 400;
@@ -483,36 +716,41 @@ async function drawCoverToCtx(ctx, slots) {
 /* ── 차량 카드 ── */
 async function drawCarCard(ctx, car) {
   const T = activeTheme;
-  ctx.fillStyle = T.bg; ctx.fillRect(0,0,W,H);
+  const L = activeLayout.id;
+  drawCardBg(ctx);
 
-  // ── 배경 장식: 우측 하단 큰 반원 ──
-  ctx.beginPath();
-  ctx.arc(W + 80, H + 80, 360, 0, Math.PI*2);
-  ctx.fillStyle = T.cardDeco1;
-  ctx.fill();
-
-  // ── 배경 장식: 좌측 상단 큰 반원 ──
-  ctx.beginPath();
-  ctx.arc(-80, -80, 360, 0, Math.PI*2);
-  ctx.fillStyle = T.cardDeco2;
-  ctx.fill();
-
-
-
-  // ── 상단 텍스트 영역 ──
-
-
-  // 차량명 — 상단 왼쪽 크게
   const px = 52;
-  ctx.fillStyle=T.textDark; ctx.font='bold 62px sans-serif';
+  const isBlob     = (L === 'blob');
+  const isPolygon  = (L === 'polygon');
+  const isRoundbar = (L === 'roundbar');
+  const isDark     = (T.id === 'dark');
+
+  // ── 상단: 차량명 + 스펙 ──
+  // 폴리곤: 상단 흰색 → 어두운 텍스트
+  // 라운드바: 흰 베이스 → 어두운 텍스트
+  // 블롭: 어두운 배경 → 흰 텍스트 + 그림자
+  // 삼각형: 테마 textDark
+  let nameColor, specColor;
+  if (isBlob) {
+    nameColor = '#ffffff';
+    specColor = 'rgba(255,255,255,0.80)';
+    ctx.shadowColor='rgba(0,0,0,0.35)'; ctx.shadowBlur=12;
+  } else if (isPolygon || isRoundbar) {
+    nameColor = '#1a1a2e';
+    specColor = 'rgba(30,30,50,0.55)';
+  } else {
+    nameColor = T.textDark;
+    specColor = isDark ? 'rgba(255,255,255,0.5)' : '#888888';
+  }
+
+  ctx.fillStyle=nameColor; ctx.font='bold 62px sans-serif';
   ctx.fillText(car.name||'차량명을 입력하세요', px, 148);
-
-  // 스펙
-  ctx.fillStyle= T.id==='dark' ? 'rgba(255,255,255,0.5)' : '#888';
-  ctx.font='26px sans-serif';
+  if (isBlob) ctx.shadowBlur=6;
+  ctx.fillStyle=specColor; ctx.font='26px sans-serif';
   ctx.fillText(car.spec||'트림 정보', px, 192);
+  if (isBlob) { ctx.shadowColor='transparent'; ctx.shadowBlur=0; }
 
-  // ── 차량 이미지 — 중앙 크게 ──
+  // ── 차량 이미지 ──
   const imgObj=car.img;
   const imgX=20, imgY=220, imgW=W-40, imgH=480;
   if(imgObj){
@@ -525,13 +763,36 @@ async function drawCarCard(ctx, car) {
     ctx.fillText('차량 이미지를 추가해주세요',W/2,imgY+imgH/2+8); ctx.textAlign='left';
   }
 
-  // ── 하단 가격 영역 ──
+  // ── 하단 가격 ──
+  // 폴리곤: 하단이 진한 accent → 흰 텍스트로 대비
+  // 라운드바: 흰 베이스 → accent 텍스트 (배경 밝음)
+  // 블롭: 어두운 배경 → 흰 텍스트
+  // 삼각형: 테마 priceColor
+  let finalPriceColor, finalLabelColor;
+  if (isBlob) {
+    finalPriceColor = '#ffffff';
+    finalLabelColor = 'rgba(255,255,255,0.80)';
+    ctx.shadowColor='rgba(0,0,0,0.35)'; ctx.shadowBlur=8;
+  } else if (isPolygon) {
+    // 하단이 accent 색으로 진해짐 → 흰 텍스트
+    finalPriceColor = '#ffffff';
+    finalLabelColor = 'rgba(255,255,255,0.80)';
+  } else if (isRoundbar) {
+    // 흰 베이스 배경 → accent 텍스트
+    finalPriceColor = T.accent;
+    finalLabelColor = isDark ? 'rgba(255,255,255,0.5)' : '#888888';
+  } else {
+    // 삼각형
+    finalPriceColor = T.priceColor;
+    finalLabelColor = isDark ? 'rgba(255,255,255,0.5)' : '#888888';
+  }
+
   const priceLabel = car.priceType === 'price' ? '차량 가격' : '장기 렌트/리스';
-  ctx.fillStyle= T.id==='dark' ? 'rgba(255,255,255,0.5)' : '#888';
-  ctx.font='24px sans-serif'; ctx.textAlign='center';
+  ctx.fillStyle=finalLabelColor; ctx.font='24px sans-serif'; ctx.textAlign='center';
   ctx.fillText(priceLabel, W/2, 756);
-  ctx.fillStyle=T.priceColor; ctx.font='bold 80px sans-serif'; ctx.textAlign='center';
+  ctx.fillStyle=finalPriceColor; ctx.font='bold 80px sans-serif';
   ctx.fillText(car.monthly||'금액을 입력하세요', W/2, 852);
+  if (isBlob) { ctx.shadowColor='transparent'; ctx.shadowBlur=0; }
   ctx.textAlign='left';
 }
 
@@ -543,17 +804,13 @@ async function renderAll() {
   cvs.width=W; cvs.height=H;
   const ctx = cvs.getContext('2d');
   const results = [];
-
-  // coverSlots에 cidx 부여
   const slotsWithIdx = coverSlots.map((s,i) => ({...s, cidx:i}));
   await drawCoverToCtx(ctx, slotsWithIdx);
   results.push({ canvas: clone(cvs), label:'커버 카드', isCover: true });
-
   for (let i=0; i<6; i++) {
     await drawCarCard(ctx, cars[i]);
     results.push({ canvas: clone(cvs), label:`차량 ${i+1}`, isCover: false });
   }
-
   const grid = document.getElementById('pv-grid');
   grid.innerHTML = '';
   results.forEach(({canvas,label,isCover}, idx) => {
@@ -573,21 +830,18 @@ async function renderAll() {
   window._res=results; window._period=period;
 }
 
-/* ══════════════════════════════════════
-   드래그 편집 모달
-══════════════════════════════════════ */
-const EC_W = 500, EC_H = 625; // 편집 캔버스 크기 (800:1000 비율)
-const SCALE_RATIO = EC_W / W;  // 0.625
+/* ══════ 드래그 편집 모달 ══════ */
+const EC_W = 500, EC_H = 625;
+const SCALE_RATIO = EC_W / W;
 let editSlots = [];
 let activeTab = 0;
-let dragState = null; // { cidx, offsetX, offsetY }
+let dragState = null;
 
 function openEditModal() {
-  editSlots = coverSlots.map((s,i) => ({...s, cidx:i}));
+  editSlots = coverSlots.map((s,i) => ({...s, cidx:i, visible: s.visible !== false}));
   buildTabs();
   selectTab(0);
-  const modal = document.getElementById('edit-modal-bg');
-  modal.classList.add('open');
+  document.getElementById('edit-modal-bg').classList.add('open');
   const ec = document.getElementById('edit-canvas');
   ec.width = EC_W; ec.height = EC_H;
   renderEditCanvas();
@@ -608,6 +862,14 @@ function buildTabs() {
     btn.onclick = () => selectTab(i);
     tabs.appendChild(btn);
   });
+  // ON/OFF 토글 행
+  let visRow = document.getElementById('vis-toggle-row');
+  if (!visRow) {
+    visRow = document.createElement('div');
+    visRow.id = 'vis-toggle-row';
+    visRow.style.cssText = 'display:none;';
+    tabs.parentNode.insertBefore(visRow, tabs.nextSibling);
+  }
 }
 
 function _setVisStyle(btn, visible) {
@@ -623,6 +885,13 @@ function toggleVisActive() {
   _setVisStyle(document.getElementById('vis-toggle-btn'), s.visible);
   renderEditCanvas();
 }
+
+const DEFAULT_SLOTS = [
+  { x: 180, y: 640, scale: 100, z: 1, visible: true },
+  { x: 560, y: 690, scale: 110, z: 2, visible: true },
+  { x: 370, y: 890, scale: 140, z: 3, visible: true },
+];
+let coverSlots = DEFAULT_SLOTS.map(s => ({...s}));
 
 function selectTab(i) {
   activeTab = i;
@@ -838,6 +1107,7 @@ function rr(ctx,x,y,w,h,r){
 
 buildInputs();
 buildThemeGrid();
+buildLayoutGrid();
 </script>
 </body>
 </html>
