@@ -195,15 +195,15 @@
         <div class="slider-group">
           <label>X 위치</label>
           <div class="slider-row">
-            <input type="range" id="sl-x" min="-200" max="800" step="1" oninput="onSlider('x',this.value)">
-            <input type="number" id="num-x" min="-200" max="800" step="1" oninput="onNumber('x',this.value)">
+            <input type="range" id="sl-x" min="-150" max="600" step="1" oninput="onSlider('x',this.value)">
+            <input type="number" id="num-x" min="-150" max="600" step="1" oninput="onNumber('x',this.value)">
           </div>
         </div>
         <div class="slider-group">
           <label>Y 위치</label>
           <div class="slider-row">
-            <input type="range" id="sl-y" min="300" max="1000" step="1" oninput="onSlider('y',this.value)">
-            <input type="number" id="num-y" min="300" max="1000" step="1" oninput="onNumber('y',this.value)">
+            <input type="range" id="sl-y" min="200" max="800" step="1" oninput="onSlider('y',this.value)">
+            <input type="number" id="num-y" min="200" max="800" step="1" oninput="onNumber('y',this.value)">
           </div>
         </div>
         <div class="slider-group">
@@ -232,11 +232,11 @@
 <canvas id="rc"></canvas>
 
 <script>
-const W = 800, H = 1000;
+const W = 600, H = 800;
 const BLUE = '#1B5EF7';
 const DARK = '#0D1B3E';
 const CREAM = '#EEE9E0';
-const FOOTER_H = 72;
+const FOOTER_H = 56;
 
 const cars = Array.from({length:6}, () => ({ name:'', spec:'', monthly:'', img:null, priceType:'rent' }));
 
@@ -624,13 +624,13 @@ function getPeriod() {
 function drawFooter(ctx) {
   ctx.fillStyle = BLUE;
   ctx.fillRect(0, H - FOOTER_H, W, FOOTER_H);
-  ctx.fillStyle = '#fff'; ctx.font = 'bold 30px sans-serif'; ctx.textAlign = 'left';
-  ctx.fillText('danawa', 36, H - 20);
-  const ax=187, ay=H-47;
-  ctx.beginPath(); ctx.moveTo(ax,ay); ctx.lineTo(ax+18,ay+13); ctx.lineTo(ax,ay+26); ctx.closePath();
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 22px sans-serif'; ctx.textAlign = 'left';
+  ctx.fillText('danawa', 28, H - 16);
+  const ax=140, ay=H-38;
+  ctx.beginPath(); ctx.moveTo(ax,ay); ctx.lineTo(ax+14,ay+10); ctx.lineTo(ax,ay+20); ctx.closePath();
   ctx.fillStyle = '#fff'; ctx.fill();
-  ctx.fillStyle = '#fff'; ctx.font = 'bold 30px sans-serif';
-  ctx.fillText('다나와자동차', 216, H - 20);
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 22px sans-serif';
+  ctx.fillText('다나와자동차', 162, H - 16);
   ctx.textAlign = 'left';
 }
 
@@ -663,30 +663,30 @@ async function drawCoverToCtx(ctx, slots) {
   const textSub   = isBlob ? 'rgba(255,255,255,0.72)'
                            : (isBrightBg ? 'rgba(30,30,50,0.55)' : (isDark ? 'rgba(255,255,255,0.55)' : 'rgba(40,40,60,0.55)'));
 
-  ctx.font = 'bold 26px sans-serif';
+  ctx.font = 'bold 20px sans-serif';
   const bw = ctx.measureText(badgeText).width + 48;
   const bx = (W-bw)/2;
 
   if (isBlob) {
     // 블롭: 반투명 흰 테두리 배지
-    ctx.fillStyle = 'rgba(255,255,255,0.22)'; rr(ctx,bx,44,bw,46,23); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.22)'; rr(ctx,bx,34,bw,36,18); ctx.fill();
     ctx.strokeStyle='rgba(255,255,255,0.65)'; ctx.lineWidth=1.5;
-    rr(ctx,bx,44,bw,46,23); ctx.stroke();
+    rr(ctx,bx,34,bw,36,18); ctx.stroke();
     ctx.shadowColor='rgba(0,0,0,0.25)'; ctx.shadowBlur=8;
-    ctx.fillStyle='#fff'; ctx.textAlign='center'; ctx.fillText(badgeText, W/2, 75);
-    ctx.font='bold 72px sans-serif';
+    ctx.fillStyle='#fff'; ctx.textAlign='center'; ctx.fillText(badgeText, W/2, 58);
+    ctx.font='bold 56px sans-serif';
     ctx.shadowColor='rgba(0,0,0,0.30)'; ctx.shadowBlur=16;
   } else {
     // triangle/roundbar/polygon: accent 배지
-    ctx.fillStyle = T.accent; rr(ctx,bx,44,bw,46,23); ctx.fill();
-    ctx.fillStyle = '#fff'; ctx.textAlign='center'; ctx.fillText(badgeText, W/2, 75);
-    ctx.font='bold 72px sans-serif'; ctx.textAlign='center';
+    ctx.fillStyle = T.accent; rr(ctx,bx,34,bw,36,18); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.textAlign='center'; ctx.fillText(badgeText, W/2, 58);
+    ctx.font='bold 56px sans-serif'; ctx.textAlign='center';
   }
 
-  ctx.fillStyle = textMain; ctx.fillText(line1, W/2, 192);
-  ctx.fillStyle = textAccent; ctx.fillText(line2, W/2, 276);
+  ctx.fillStyle = textMain; ctx.fillText(line1, W/2, 150);
+  ctx.fillStyle = textAccent; ctx.fillText(line2, W/2, 216);
   ctx.fillStyle = textSub;
-  ctx.font = '27px sans-serif'; ctx.fillText(sub, W/2, 328);
+  ctx.font = '21px sans-serif'; ctx.fillText(sub, W/2, 256);
   ctx.shadowColor='transparent'; ctx.shadowBlur=0;
 
   ctx.textAlign = 'left';
@@ -719,7 +719,7 @@ async function drawCarCard(ctx, car) {
   const L = activeLayout.id;
   drawCardBg(ctx);
 
-  const px = 52;
+  const px = 40;
   const isBlob     = (L === 'blob');
   const isPolygon  = (L === 'polygon');
   const isRoundbar = (L === 'roundbar');
@@ -743,16 +743,16 @@ async function drawCarCard(ctx, car) {
     specColor = isDark ? 'rgba(255,255,255,0.5)' : '#888888';
   }
 
-  ctx.fillStyle=nameColor; ctx.font='bold 62px sans-serif';
-  ctx.fillText(car.name||'차량명을 입력하세요', px, 148);
+  ctx.fillStyle=nameColor; ctx.font='bold 48px sans-serif';
+  ctx.fillText(car.name||'차량명을 입력하세요', px, 115);
   if (isBlob) ctx.shadowBlur=6;
-  ctx.fillStyle=specColor; ctx.font='26px sans-serif';
-  ctx.fillText(car.spec||'트림 정보', px, 192);
+  ctx.fillStyle=specColor; ctx.font='20px sans-serif';
+  ctx.fillText(car.spec||'트림 정보', px, 150);
   if (isBlob) { ctx.shadowColor='transparent'; ctx.shadowBlur=0; }
 
   // ── 차량 이미지 ──
   const imgObj=car.img;
-  const imgX=20, imgY=220, imgW=W-40, imgH=480;
+  const imgX=15, imgY=170, imgW=W-30, imgH=390;
   if(imgObj){
     const scale=Math.min(imgW/imgObj.width,imgH/imgObj.height);
     const dw=imgObj.width*scale,dh=imgObj.height*scale;
@@ -788,10 +788,10 @@ async function drawCarCard(ctx, car) {
   }
 
   const priceLabel = car.priceType === 'price' ? '차량 가격' : '장기 렌트/리스';
-  ctx.fillStyle=finalLabelColor; ctx.font='24px sans-serif'; ctx.textAlign='center';
-  ctx.fillText(priceLabel, W/2, 756);
-  ctx.fillStyle=finalPriceColor; ctx.font='bold 80px sans-serif';
-  ctx.fillText(car.monthly||'금액을 입력하세요', W/2, 852);
+  ctx.fillStyle=finalLabelColor; ctx.font='19px sans-serif'; ctx.textAlign='center';
+  ctx.fillText(priceLabel, W/2, 598);
+  ctx.fillStyle=finalPriceColor; ctx.font='bold 62px sans-serif';
+  ctx.fillText(car.monthly||'금액을 입력하세요', W/2, 672);
   if (isBlob) { ctx.shadowColor='transparent'; ctx.shadowBlur=0; }
   ctx.textAlign='left';
 }
@@ -821,8 +821,8 @@ async function renderAll() {
       : `<button onclick="dlOne(${idx})">저장</button>`;
     lbar.innerHTML = `<span>${label}</span>${btnHtml}`;
     const cv = document.createElement('canvas'); cv.className='pv-canvas';
-    cv.width=400; cv.height=500;
-    cv.getContext('2d').drawImage(canvas,0,0,400,500);
+    cv.width=300; cv.height=400;
+    cv.getContext('2d').drawImage(canvas,0,0,300,400);
     cv.style.cursor = 'default';
     item.appendChild(lbar); item.appendChild(cv);
     grid.appendChild(item);
@@ -831,7 +831,7 @@ async function renderAll() {
 }
 
 /* ══════ 드래그 편집 모달 ══════ */
-const EC_W = 500, EC_H = 625;
+const EC_W = 450, EC_H = 600;
 const SCALE_RATIO = EC_W / W;
 let editSlots = [];
 let activeTab = 0;
@@ -887,9 +887,9 @@ function toggleVisActive() {
 }
 
 const DEFAULT_SLOTS = [
-  { x: 180, y: 640, scale: 100, z: 1, visible: true },
-  { x: 560, y: 690, scale: 110, z: 2, visible: true },
-  { x: 370, y: 890, scale: 140, z: 3, visible: true },
+  { x: 140, y: 500, scale: 100, z: 1, visible: true },
+  { x: 440, y: 540, scale: 110, z: 2, visible: true },
+  { x: 290, y: 700, scale: 140, z: 3, visible: true },
 ];
 let coverSlots = DEFAULT_SLOTS.map(s => ({...s}));
 
