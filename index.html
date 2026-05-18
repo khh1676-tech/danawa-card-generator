@@ -713,15 +713,9 @@ function buildInputs() {
         <div class="fg"><label>트림/스펙</label><input type="text" placeholder="예) 가솔린 터보 1.6" oninput="cars[${i}].spec=this.value"></div>
       </div>
       <div class="f1 fg">
-        <label>가격 유형</label>
-        <div style="display:flex;gap:6px;margin-bottom:7px">
-          <label style="display:flex;align-items:center;gap:4px;font-size:12px;font-weight:400;color:#0D1B3E;cursor:pointer">
-            <input type="radio" name="pt${i}" value="rent" checked onchange="cars[${i}].priceType=this.value" style="width:auto"> 장기 렌트/리스
-          </label>
-          <label style="display:flex;align-items:center;gap:4px;font-size:12px;font-weight:400;color:#0D1B3E;cursor:pointer">
-            <input type="radio" name="pt${i}" value="price" onchange="cars[${i}].priceType=this.value" style="width:auto"> 차량 가격
-          </label>
-        </div>
+        <label>가격 라벨</label>
+        <input type="text" placeholder="예) 장기 렌트/리스 · 차량 가격" style="margin-bottom:7px" oninput="cars[${i}].priceType=this.value">
+        <label>가격</label>
         <input type="text" placeholder="예) 월 28만원~ / 3,500만원~" oninput="cars[${i}].monthly=this.value">
       </div>
       <div class="fg">
@@ -919,7 +913,7 @@ async function drawCarCard(ctx, car) {
     finalLabelColor = isDark ? 'rgba(255,255,255,0.5)' : '#888888';
   }
 
-  const priceLabel = car.priceType === 'price' ? '차량 가격' : '장기 렌트/리스';
+  const priceLabel = car.priceType || '';
   ctx.fillStyle=finalLabelColor; ctx.font='19px sans-serif'; ctx.textAlign='center';
   ctx.fillText(priceLabel, W/2, 598);
   ctx.fillStyle=finalPriceColor; ctx.font='bold 62px sans-serif';
